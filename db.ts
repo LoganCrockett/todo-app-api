@@ -1,3 +1,4 @@
+require("dotenv-flow").config();
 import postgres, { Sql } from "postgres";
 
 const sql: Sql = postgres({

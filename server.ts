@@ -1,4 +1,3 @@
-require("dotenv-flow").config();
 import express, { Express, Request, Response } from "express";
 import UserRouter from "./routers/UserRouter";
 

@@ -1,5 +1,5 @@
-const server = require("../../server");
-const supertest = require("supertest");
+const server = require("../server");
+import supertest from "supertest";
 
 describe("Testing Default Catch All Route", () => {
     test("Catch All Route", async () => {
