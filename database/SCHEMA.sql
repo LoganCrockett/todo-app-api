@@ -6,31 +6,38 @@ create schema if not exists todo authorization todoappadmin;
 
 create table if not exists todo.users (
 	id serial primary key,
-	email varchar(100) not null,
-	"password" varchar(100) not null,
-	first_name varchar(100),
-	last_name varchar(100),
-	created_on_date timestamp with time zone,
-	last_login_date timestamp with time zone
+	email varchar(100) unique not null,
+	"firstName" varchar(100),
+	"lastName" varchar(100),
+	"createdOnDate" timestamp with time zone
+);
+
+create table if not exists todo."userCredentials" (
+	"userId" int not null,
+	"password" varchar(50) not null,
+	"lastLoginDate" timestamp with time zone,
+	constraint "userIdFK" foreign key ("userId")
+	references todo.users (id)
+	on update cascade on delete cascade
 );
 
 create table if not exists todo.list (
 	id serial primary key,
 	name varchar(50) not null,
-	created_on_date timestamp with time zone,
-	last_updated_date timestamp with time zone,
-	created_by int not null,
-	constraint created_by_fk foreign key (created_by)
+	"createdOnDate" timestamp with time zone,
+	"lastUpdatedDate" timestamp with time zone,
+	"createdBy" int not null,
+	constraint "createdByFK" foreign key ("createdBy")
     references todo.users (id)
 	on update cascade on delete cascade
 );
 
-create table if not exists todo.list_items (
+create table if not exists todo."listItems" (
 	id serial primary key,
-	list_id int not null, 
+	"listId" int not null, 
 	description varchar(200),
-	created_on_date timestamp with time zone,
-	constraint list_id_fk foreign key (list_id)
+	"createdOnDate" timestamp with time zone,
+	constraint "listIdFK" foreign key ("listId")
 	references todo.list (id)
 	on update cascade on delete cascade
 );
