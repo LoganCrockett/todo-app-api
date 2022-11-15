@@ -1,6 +1,6 @@
 import { PostgresError } from "postgres";
 import UserDAO from "../../dao/user.dao";
-import { emailAndPasswordData, userIds, userPasswordResetData, users, userUpdates } from "../../mockData/users.data";
+import { emailAndPasswordData, userIds, userPasswordResetData, userUpdates } from "../../mockData/users.data";
 import User from "../../models/users/user.model";
 
 describe("User DAO Tests", () => {
@@ -25,8 +25,8 @@ describe("User DAO Tests", () => {
             expect(user.createdOnDate).not.toBeNull();
         })
         .catch((err: PostgresError) => {
-            console.log(err);
-            expect(err).toBe("Received an error. Forcing this test to fail.");
+            console.log(err.message);
+            expect(err.message).toBe("Received an error. Forcing this test to fail.");
         });
     });
 
@@ -45,29 +45,34 @@ describe("User DAO Tests", () => {
             }
         })
         .catch((err: PostgresError) => {
-            console.log(err);
-            expect(err).toBe("Received an error. Forcing this test to fail.");
+            console.log(err.message);
+            expect(err.message).toBe("Received an error. Forcing this test to fail.");
         });
     });
 
     test.each(emailAndPasswordData)("User Log In (Checking credentials)", async ({ email, password, expected }) => {
         await UserDAO.checkUserCredentialsForLogin(email, password)
-        .then((user: User) => {
+        .then((user: User | undefined) => {
             if (expected === undefined) {
                 expect(user).toBeUndefined();
             }
             else {
                 expect(user).toBeDefined();
+                // @ts-ignore
                 expect(user.email).toMatch(expected.email);
+                // @ts-ignore
                 expect(user.id).toEqual(expected.id);
+                // @ts-ignore
                 expect(user.firstName).toMatch(expected.firstName);
+                // @ts-ignore
                 expect(user.lastName).toMatch(expected.lastName);
+                // @ts-ignore
                 expect(user.createdOnDate).toEqual(expected.createdOnDate)
             }
         })
         .catch((err: PostgresError) => {
-            console.log(err);
-            expect(err).toBe("Received an error. Forcing this test to fail.");
+            console.log(err.message);
+            expect(err.message).toBe("Received an error. Forcing this test to fail.");
         })
     });
 
@@ -88,8 +93,8 @@ describe("User DAO Tests", () => {
             }
         })
         .catch((err: PostgresError) => {
-            console.log(err);
-            expect(err).toBe("Received an error. Forcing this test to fail.");
+            console.log(err.message);
+            expect(err.message).toMatch("Received an error. Forcing this test to fail.");
         });
     });
 
@@ -100,8 +105,8 @@ describe("User DAO Tests", () => {
             data.expected ? expect(res).toBeTruthy() : expect(res).toBeFalsy();
         })
         .catch((err: PostgresError) => {
-            console.log(err);
-            expect(err).toBe("Received an error. Forcing this test to fail.");
+            console.log(err.message);
+            expect(err.message).toMatch("Received an error. Forcing this test to fail.");
         });
     });
 });

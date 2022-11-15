@@ -14,7 +14,7 @@ create table if not exists todo.users (
 
 create table if not exists todo."userCredentials" (
 	"userId" int not null,
-	"password" varchar(50) not null,
+	"password" varchar(181) not null,
 	"lastLoginDate" timestamp with time zone,
 	constraint "userIdFK" foreign key ("userId")
 	references todo.users (id)
