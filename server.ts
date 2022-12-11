@@ -1,7 +1,9 @@
 import express, { Express, Request, Response } from "express";
 import UserRouter from "./routers/user.router";
+import bodyParser from "body-parser";
 
 const server: Express = express();
+server.use(bodyParser.json());
 
 server.use("/api/user", UserRouter);
 
