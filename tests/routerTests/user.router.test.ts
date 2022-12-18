@@ -4,13 +4,19 @@ import NewUserData, { NewUserTestData } from "../../models/request/user/NewUserD
 import UserDao from "../../dao/user.dao";
 import User from "../../models/users/user.model";
 import UserLoginCredentials, { UserLoginTestCredentials } from "../../models/request/user/UserLoginCredentials.model";
+import * as userAuthFunctions from "../../helperFunctions/cookies.helper";
+import { Response } from "express";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
 
+let addCookieToResponseSpy: jest.SpyInstance;
+
 beforeEach(() => {
     UserDao.createUser = jest.fn();
     UserDao.checkUserCredentialsForLogin = jest.fn();
+
+    addCookieToResponseSpy = jest.spyOn(userAuthFunctions, "addCookieToResponse");
 });
 
 afterEach(() => {
@@ -64,6 +70,10 @@ describe("User Router (Valid Data)", () => {
                 });
         });
 
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
         await tester.post(`${userRouterLink}/login`)
         .set("Content-Type", "application/json")
         .send(userCredentialsData)
@@ -72,6 +82,17 @@ describe("User Router (Valid Data)", () => {
         .then((res) => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
+
+            // Make sure user was authenticated
+            expect(res.headers["set-cookie"]).toBeDefined();
+            expect(res.headers["set-cookie"]).toHaveLength(1);
+
+            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
+            
+            expect(setCookieHeaderValue).toContain("userSession");
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
 
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(1);
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenLastCalledWith(userCredentialsData.email, userCredentialsData.password);
@@ -185,6 +206,12 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
+            // Make sure we are not authenticating the user
+            expect(res.headers["set-cookie"]).toBeUndefined();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(0);
+            expect(addCookieToResponseSpy).not.toReturn();
+
             expect(UserDao.checkUserCredentialsForLogin).not.toBeCalled();
         });
     });
@@ -207,6 +234,12 @@ describe("User Router (Invalid Data)", () => {
         .then((res) => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
+
+            // Make sure we are not authenticating the user
+            expect(res.headers["set-cookie"]).toBeUndefined();
+
+            expect(addCookieToResponseSpy).toBeCalledTimes(0);
+            expect(addCookieToResponseSpy).not.toReturn();
 
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(1);
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledWith(userLoginData.email, userLoginData.password);

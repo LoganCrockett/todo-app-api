@@ -1,14 +1,20 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import NewUserData from "../models/request/user/NewUserData.model";
 import ResponseBody from "../models/response/responseBody.model";
 import UserDAO from "../dao/user.dao";
 import UserLoginCredentials from "../models/request/user/UserLoginCredentials.model";
+import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie } from "../helperFunctions/cookies.helper";
 
 // Should match to /user
 const UserRouter: Router = Router({
     caseSensitive: true
 });
 
+/**
+ * Creates a new user
+ * 
+ * *Note:* We **ARE NOT** authenticating the user on this request. They will have to log in on a separate request
+ */
 UserRouter.post("", async (req: Request, res: Response<ResponseBody<string>>) => {
     if (req.body === undefined || req.body === null) {
         res.status(400).json({
@@ -92,6 +98,8 @@ UserRouter.post("/login", async (req: Request, res: Response<ResponseBody<string
             });
             return;
         }
+
+        addCookieToResponse(res, response);
 
         res.status(200).json({
             data: "Successfully logged in"

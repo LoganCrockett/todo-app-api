@@ -1,9 +1,11 @@
 import express, { Express, Request, Response } from "express";
 import UserRouter from "./routers/user.router";
 import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 
 const server: Express = express();
 server.use(bodyParser.json());
+server.use(cookieParser(process.env.COOKIE_SECRET));
 
 server.use("/api/user", UserRouter);
 
