@@ -24,7 +24,7 @@ export function addCookieToResponse(res: Response, payload: {}): void {
 }
 
 /**
- * Verifies that a given JWT cookie from a request is valid
+ * Verifies that a given JWT cookie from a request is valid, and refreshes it
  * 
  * If so, it passes the request onto the next handler;
  * otherwise, it returns a 401 (Unaouthorized)
@@ -65,6 +65,48 @@ export function verifyAndRefreshJWTFromRequestCookie(req: Request, res: Response
         res.status(401).json({
             data: "user not logged in"
         });
+        return;
+    }
+};
+
+/**
+ * Verifies that a JWT cookie from a request is valid (Used only for the inital login route)
+ * 
+ * If there is a valid toekn present, then returns a status code of 400
+ * 
+ * @param req  request we are checking
+ * @param res response object
+ * @param next next function to call if we finish with all of our checks
+ */
+export function verifyJWTTokenFromRequestCookie(req: Request, res: Response<ResponseBody<string>>, next: NextFunction) {
+    const token = req.signedCookies.userSession;
+
+    // No token present means we need to login
+    if (!token) {
+        next();
+        return;
+    }
+
+    try {
+        const decoded: JwtPayload = jwt.verify(token, publicKey, {
+            maxAge: "15m"
+        }) as JwtPayload;
+
+        // If not defined, we need to login
+        if (!decoded) {
+            next();
+            return;
+        }
+
+        // If it is a valid token, the user has already logged in.
+        // Return a bad request (400)
+        res.status(400).json({
+            data: "user already logged in"
+        });
+        return;
+    } catch (err) {
+        // No valid token means we need to login
+        next();
         return;
     }
 };

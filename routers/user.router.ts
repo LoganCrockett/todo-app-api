@@ -3,7 +3,8 @@ import NewUserData from "../models/request/user/NewUserData.model";
 import ResponseBody from "../models/response/responseBody.model";
 import UserDAO from "../dao/user.dao";
 import UserLoginCredentials from "../models/request/user/UserLoginCredentials.model";
-import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie } from "../helperFunctions/cookies.helper";
+import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie, verifyJWTTokenFromRequestCookie } from "../helperFunctions/cookies.helper";
+import User from "../models/users/user.model";
 
 // Should match to /user
 const UserRouter: Router = Router({
@@ -66,7 +67,12 @@ UserRouter.post("", async (req: Request, res: Response<ResponseBody<string>>) =>
     });
 });
 
-UserRouter.post("/login", async (req: Request, res: Response<ResponseBody<string>>) => {
+/**
+ * Log a user in (if they have the correct credentials)
+ */
+UserRouter.post("/login", (req: Request, res: Response, next: NextFunction) => {
+    verifyJWTTokenFromRequestCookie(req, res, next);
+}, async (req: Request, res: Response<ResponseBody<string>>) => {
     if (req.body === undefined || req.body === null) {
         res.status(400).json({
             data: "Request body cannot be empty"
@@ -103,6 +109,42 @@ UserRouter.post("/login", async (req: Request, res: Response<ResponseBody<string
 
         res.status(200).json({
             data: "Successfully logged in"
+        });
+    })
+    .catch((err) => {
+        res.status(500).json({
+            data: "An unexpected error occured. Please try again"
+        });
+    });
+});
+
+/**
+ * Get a user's data by their id
+ */
+UserRouter.get("/:id", (req: Request, res: Response<ResponseBody<string | User>>, next: NextFunction) => {
+    verifyAndRefreshJWTFromRequestCookie(req, res, next);
+} , async (req: Request, res: Response) => {
+
+    const paramId: string = req.params.id;
+    
+    if (paramId === undefined || paramId === null || paramId.includes("undefined") || paramId.includes("null")) {
+        res.status(400).json({
+            data: "invalid id format detected"
+        });
+        return;
+    }
+
+    await UserDAO.getUserById(Number.parseInt(paramId))
+    .then((user) => {
+        if (user === undefined) {
+            res.status(404).json({
+                data: "user not found"
+            });
+            return;
+        }
+
+        res.status(200).json({
+            data: user
         });
     })
     .catch((err) => {

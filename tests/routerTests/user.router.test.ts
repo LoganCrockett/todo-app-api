@@ -5,18 +5,25 @@ import UserDao from "../../dao/user.dao";
 import User from "../../models/users/user.model";
 import UserLoginCredentials, { UserLoginTestCredentials } from "../../models/request/user/UserLoginCredentials.model";
 import * as userAuthFunctions from "../../helperFunctions/cookies.helper";
-import { Response } from "express";
+import { NextFunction, Response } from "express";
+import { users } from "../../mockData/users.data";
+import ResponseBody from "../../models/response/responseBody.model";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
 
 let addCookieToResponseSpy: jest.SpyInstance;
+let verifyAndRefreshJWTFromRequestCookie: jest.SpyInstance;
+let verifyJWTTokenFromRequestCookie: jest.SpyInstance;
 
 beforeEach(() => {
     UserDao.createUser = jest.fn();
     UserDao.checkUserCredentialsForLogin = jest.fn();
+    UserDao.getUserById = jest.fn();
 
     addCookieToResponseSpy = jest.spyOn(userAuthFunctions, "addCookieToResponse");
+    verifyAndRefreshJWTFromRequestCookie = jest.spyOn(userAuthFunctions, "verifyAndRefreshJWTFromRequestCookie");
+    verifyJWTTokenFromRequestCookie = jest.spyOn(userAuthFunctions, "verifyJWTTokenFromRequestCookie");
 });
 
 afterEach(() => {
@@ -70,6 +77,10 @@ describe("User Router (Valid Data)", () => {
                 });
         });
 
+        verifyJWTTokenFromRequestCookie.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+            next();
+        });
+
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
             res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
         });
@@ -94,12 +105,54 @@ describe("User Router (Valid Data)", () => {
             expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
             expect(addCookieToResponseSpy).toReturn();
 
+            expect(verifyJWTTokenFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyJWTTokenFromRequestCookie).toReturn();
+
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(1);
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenLastCalledWith(userCredentialsData.email, userCredentialsData.password);
         });
     });
 
-    test.todo("Getting User by Id");
+    test.each(users)("Getting User by Id", async (user) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        UserDao.getUserById = jest.fn().mockImplementation(() => {
+            return Promise.resolve(user);
+        });
+
+        await tester.get(`${userRouterLink}/${user.id}`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .expect(200)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("object");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            // Make sure user was authenticated
+            expect(res.headers["set-cookie"]).toBeDefined();
+            expect(res.headers["set-cookie"]).toHaveLength(1);
+
+            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
+            
+            expect(setCookieHeaderValue).toContain("userSession");
+
+            expect(UserDao.getUserById).toHaveBeenCalledTimes(1);
+            expect(UserDao.getUserById).toHaveBeenCalledWith(user.id);
+        });
+    });
 
     test.todo("Updating user by Id");
     
@@ -181,6 +234,12 @@ const invalidLoginCredentials: Array<UserLoginTestCredentials | undefined> = [
     }
 ];
 
+const invalidUserIds = [
+    undefined,
+    null,
+    "testing"
+];
+
 describe("User Router (Invalid Data)", () => {
     test.each(invalidNewUserData)("Creating New User (Invalid)", async (inputData) => {
         await tester.post(userRouterLink)
@@ -246,7 +305,114 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.todo("Getting User by Id");
+    test("User Log In (User Already Logged In)", async () => {
+        const userCredentialsData: UserLoginCredentials = {
+            email: "example@email.com",
+            password: "P@ssword123"
+        };
+
+        verifyJWTTokenFromRequestCookie.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+            res.status(400).json({
+                data: "user already logged in"
+            });
+            return;
+        });
+
+        await tester.post(`${userRouterLink}/login`)
+        .set("Content-Type", "application/json")
+        .send(userCredentialsData)
+        .expect("Content-Type", /json/)
+        .expect(400)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            // This should be undefined, since we are not resetting it in this case
+            expect(res.headers["set-cookie"]).toBeUndefined();
+
+            expect(verifyJWTTokenFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyJWTTokenFromRequestCookie).toReturn();
+
+            expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(0);
+        });
+    });
+
+    test.each(invalidUserIds)("Getting User by Id (Invalid)", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        await tester.get(`${userRouterLink}/${undefined}`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .expect(400)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            // Make sure user was authenticated
+            expect(res.headers["set-cookie"]).toBeDefined();
+            expect(res.headers["set-cookie"]).toHaveLength(1);
+
+            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
+            
+            expect(setCookieHeaderValue).toContain("userSession");
+
+            expect(UserDao.getUserById).not.toBeCalled();
+        });
+    });
+
+    test("Getting User by Id (Does not exist)", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        UserDao.getUserById = jest.fn().mockImplementation(() => {
+            return Promise.resolve(undefined);
+        });
+
+        await tester.get(`${userRouterLink}/${1}`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .expect(404)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            // Make sure user was authenticated
+            expect(res.headers["set-cookie"]).toBeDefined();
+            expect(res.headers["set-cookie"]).toHaveLength(1);
+
+            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
+            
+            expect(setCookieHeaderValue).toContain("userSession");
+
+            expect(UserDao.getUserById).toHaveBeenCalledTimes(1);
+            expect(UserDao.getUserById).toHaveBeenCalledWith(1);
+        });
+    });
 
     test.todo("Updating user by Id");
 
