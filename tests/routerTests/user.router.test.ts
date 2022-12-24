@@ -8,6 +8,7 @@ import * as userAuthFunctions from "../../helperFunctions/cookies.helper";
 import { NextFunction, Response } from "express";
 import { users } from "../../mockData/users.data";
 import ResponseBody from "../../models/response/responseBody.model";
+import { checkIfUserSessionCookieIsPresent, checkIfUserSessionCookieIsNotPresent } from "../reusableTests/userSessionCookie.test";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
@@ -94,16 +95,10 @@ describe("User Router (Valid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            // Make sure user was authenticated
-            expect(res.headers["set-cookie"]).toBeDefined();
-            expect(res.headers["set-cookie"]).toHaveLength(1);
-
-            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
-            
-            expect(setCookieHeaderValue).toContain("userSession");
-
             expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
             expect(addCookieToResponseSpy).toReturn();
+
+            checkIfUserSessionCookieIsPresent(res);
 
             expect(verifyJWTTokenFromRequestCookie).toHaveBeenCalledTimes(1);
             expect(verifyJWTTokenFromRequestCookie).toReturn();
@@ -141,13 +136,7 @@ describe("User Router (Valid Data)", () => {
             expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
             expect(addCookieToResponseSpy).toReturn();
 
-            // Make sure user was authenticated
-            expect(res.headers["set-cookie"]).toBeDefined();
-            expect(res.headers["set-cookie"]).toHaveLength(1);
-
-            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
-            
-            expect(setCookieHeaderValue).toContain("userSession");
+            checkIfUserSessionCookieIsPresent(res);
 
             expect(UserDao.getUserById).toHaveBeenCalledTimes(1);
             expect(UserDao.getUserById).toHaveBeenCalledWith(user.id);
@@ -265,8 +254,7 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            // Make sure we are not authenticating the user
-            expect(res.headers["set-cookie"]).toBeUndefined();
+            checkIfUserSessionCookieIsNotPresent(res);
 
             expect(addCookieToResponseSpy).toHaveBeenCalledTimes(0);
             expect(addCookieToResponseSpy).not.toReturn();
@@ -294,8 +282,7 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            // Make sure we are not authenticating the user
-            expect(res.headers["set-cookie"]).toBeUndefined();
+            checkIfUserSessionCookieIsNotPresent(res);
 
             expect(addCookieToResponseSpy).toBeCalledTimes(0);
             expect(addCookieToResponseSpy).not.toReturn();
@@ -327,8 +314,7 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            // This should be undefined, since we are not resetting it in this case
-            expect(res.headers["set-cookie"]).toBeUndefined();
+            checkIfUserSessionCookieIsNotPresent(res);
 
             expect(verifyJWTTokenFromRequestCookie).toHaveBeenCalledTimes(1);
             expect(verifyJWTTokenFromRequestCookie).toReturn();
@@ -361,13 +347,7 @@ describe("User Router (Invalid Data)", () => {
             expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
             expect(addCookieToResponseSpy).toReturn();
 
-            // Make sure user was authenticated
-            expect(res.headers["set-cookie"]).toBeDefined();
-            expect(res.headers["set-cookie"]).toHaveLength(1);
-
-            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
-            
-            expect(setCookieHeaderValue).toContain("userSession");
+            checkIfUserSessionCookieIsPresent(res);
 
             expect(UserDao.getUserById).not.toBeCalled();
         });
@@ -401,13 +381,7 @@ describe("User Router (Invalid Data)", () => {
             expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
             expect(addCookieToResponseSpy).toReturn();
 
-            // Make sure user was authenticated
-            expect(res.headers["set-cookie"]).toBeDefined();
-            expect(res.headers["set-cookie"]).toHaveLength(1);
-
-            const setCookieHeaderValue: string = res.headers["set-cookie"][0];
-            
-            expect(setCookieHeaderValue).toContain("userSession");
+            checkIfUserSessionCookieIsPresent(res);
 
             expect(UserDao.getUserById).toHaveBeenCalledTimes(1);
             expect(UserDao.getUserById).toHaveBeenCalledWith(1);
