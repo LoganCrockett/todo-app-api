@@ -71,3 +71,24 @@ export function mockGetUserById(id: number, shouldResolve: boolean): Promise<Use
     }
     return Promise.resolve(undefined);
 }
+
+/**
+ * Mocks the updateUserById method from the UserDAO
+ * @param id user's id
+ * @param firstName updated first name
+ * @param lastName updated last name
+ * @param shouldResolve if the mock should return successfully, or return undefind
+ * @returns Promise with the fake user object; otherwise, undefined
+ */
+export function mockUpdateUserById(id: number, firstName: string, lastName: string, shouldResolve: boolean): Promise<User | undefined> {
+    if (shouldResolve) {
+        return Promise.resolve({
+            id,
+            email: "example@email.com",
+            firstName,
+            lastName,
+            createdOnDate: new Date()
+        });
+    }
+    return Promise.resolve(undefined);
+}

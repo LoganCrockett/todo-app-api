@@ -2,14 +2,14 @@ const server = require("../../server");
 import supertest from "supertest";
 import NewUserData, { NewUserTestData } from "../../models/request/user/NewUserData.model";
 import UserDao from "../../dao/user.dao";
-import User from "../../models/users/user.model";
 import UserLoginCredentials, { UserLoginTestCredentials } from "../../models/request/user/UserLoginCredentials.model";
 import * as userAuthFunctions from "../../helperFunctions/cookies.helper";
 import { NextFunction, Response } from "express";
 import { users } from "../../mockData/users.data";
 import ResponseBody from "../../models/response/responseBody.model";
 import { checkIfUserSessionCookieIsPresent, checkIfUserSessionCookieIsNotPresent } from "../reusableTests/userSessionCookie.test";
-import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById } from "../mocks/dao/user.dao.mock";
+import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById, mockUpdateUserById } from "../mocks/dao/user.dao.mock";
+import UpdateUserData from "../../models/request/user/UpdateUserData.model";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
@@ -22,6 +22,7 @@ beforeEach(() => {
     UserDao.createUser = jest.fn();
     UserDao.checkUserCredentialsForLogin = jest.fn();
     UserDao.getUserById = jest.fn();
+    UserDao.updateUserById = jest.fn();
 
     addCookieToResponseSpy = jest.spyOn(userAuthFunctions, "addCookieToResponse");
     verifyAndRefreshJWTFromRequestCookie = jest.spyOn(userAuthFunctions, "verifyAndRefreshJWTFromRequestCookie");
@@ -138,7 +139,51 @@ describe("User Router (Valid Data)", () => {
         });
     });
 
-    test.todo("Updating user by Id");
+    test("Updating User by Id", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        const updateUserData: UpdateUserData = {
+            firstName: "Test",
+            lastName: "User"
+        };
+
+        UserDao.updateUserById = jest.fn().mockImplementation(() => {
+            return mockUpdateUserById(1, updateUserData.firstName, updateUserData.lastName, true);
+        });
+
+        await tester.put(`${userRouterLink}/${1}`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .send({
+            firstName: updateUserData.firstName,
+            lastName: updateUserData.lastName
+        })
+        .expect(200)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("object");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(UserDao.updateUserById).toHaveBeenCalledTimes(1);
+            expect(UserDao.updateUserById).toHaveBeenCalledWith(1, updateUserData.firstName, updateUserData.lastName);
+        });
+    });
+
+    test.todo("Reseting User Password");
     
 });
 
@@ -223,6 +268,59 @@ const invalidUserIds = [
     null,
     "testing"
 ];
+
+const invalidUpdateUserData = [
+    {
+        id: 1,
+        firstName: undefined,
+        lastName: "User"
+    },
+    {
+        id: 2,
+        firstName: null,
+        lastName: "User"
+    },
+    {
+        id: 3,
+        firstName: "undefined",
+        lastName: "User"
+    },
+    {
+        id: 4,
+        firstName: "null",
+        lastName: "User"
+    },
+    {
+        id: 5,
+        firstName: "",
+        lastName: "User"
+    },
+    {
+        id: 6,
+        firstName: "Test",
+        lastName: undefined
+    },
+    {
+        id: 7,
+        firstName: "Test",
+        lastName: null
+    },
+    {
+        id: 8,
+        firstName: "Test",
+        lastName: "undefined"
+    },
+    {
+        id: 9,
+        firstName: "Test",
+        lastName: "null"
+    },
+    {
+        id: 10,
+        firstName: "Test",
+        lastName: ""
+    },
+]
 
 describe("User Router (Invalid Data)", () => {
     test.each(invalidNewUserData)("Creating New User (Invalid)", async (inputData) => {
@@ -318,7 +416,7 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.each(invalidUserIds)("Getting User by Id (Invalid)", async () => {
+    test.each(invalidUserIds)("Getting User by Id (Invalid)", async (id) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
             res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
         });
@@ -328,7 +426,7 @@ describe("User Router (Invalid Data)", () => {
             next();
         });
 
-        await tester.get(`${userRouterLink}/${undefined}`)
+        await tester.get(`${userRouterLink}/${id}`)
         .set("Content-Type", "application/json")
         .expect("Content-Type", /json/)
         .expect(400)
@@ -383,6 +481,113 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.todo("Updating user by Id");
+    test.each(invalidUserIds)("Updating user by Id (Invalid Id's)", async (id) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
 
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        await tester.put(`${userRouterLink}/${id}`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .expect(400)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(UserDao.updateUserById).not.toHaveBeenCalled();
+        });
+    });
+
+    test.each(invalidUpdateUserData)("Updating user by Id (Invalid Update Data)", async ({ id, firstName, lastName }) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        await tester.put(`${userRouterLink}/${id}`)
+        .set("Content-Type", "application/json")
+        .send({
+            firstName,
+            lastName
+        })
+        .expect("Content-Type", /json/)
+        .expect(400)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(UserDao.updateUserById).not.toHaveBeenCalled();
+        });
+    });
+
+    test("Updating User by Id (Does not exist)", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+        });
+
+        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            userAuthFunctions.addCookieToResponse(res, {});
+            next();
+        });
+
+        const updateUserData: UpdateUserData = {
+            firstName: "Test",
+            lastName: "User"
+        };
+
+        UserDao.updateUserById = jest.fn().mockImplementation(() => {
+            return mockUpdateUserById(1, updateUserData.firstName, updateUserData.lastName, false);
+        });
+
+        await tester.put(`${userRouterLink}/${1}`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .send({
+            firstName: updateUserData.firstName,
+            lastName: updateUserData.lastName
+        })
+        .expect(404)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
+            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+
+            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
+            expect(addCookieToResponseSpy).toReturn();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(UserDao.updateUserById).toHaveBeenCalledTimes(1);
+            expect(UserDao.updateUserById).toHaveBeenCalledWith(1, updateUserData.firstName, updateUserData.lastName);
+        });
+    });
+
+    test.todo("Reseting User Password (Invalid Data)");
 });

@@ -5,6 +5,7 @@ import UserDAO from "../dao/user.dao";
 import UserLoginCredentials from "../models/request/user/UserLoginCredentials.model";
 import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie, verifyJWTTokenFromRequestCookie } from "../helperFunctions/cookies.helper";
 import User from "../models/users/user.model";
+import UpdateUserData from "../models/request/user/UpdateUserData.model";
 
 // Should match to /user
 const UserRouter: Router = Router({
@@ -121,20 +122,20 @@ UserRouter.post("/login", (req: Request, res: Response, next: NextFunction) => {
 /**
  * Get a user's data by their id
  */
-UserRouter.get("/:id", (req: Request, res: Response<ResponseBody<string | User>>, next: NextFunction) => {
+UserRouter.get("/:id", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
     verifyAndRefreshJWTFromRequestCookie(req, res, next);
-} , async (req: Request, res: Response) => {
+} , async (req: Request, res: Response<ResponseBody<string | User>>) => {
 
-    const paramId: string = req.params.id;
+    const paramId: number = Number.parseInt(req.params.id);
     
-    if (paramId === undefined || paramId === null || paramId.includes("undefined") || paramId.includes("null")) {
+    if (Number.isNaN(paramId)) {
         res.status(400).json({
             data: "invalid id format detected"
         });
         return;
     }
 
-    await UserDAO.getUserById(Number.parseInt(paramId))
+    await UserDAO.getUserById(paramId)
     .then((user) => {
         if (user === undefined) {
             res.status(404).json({
@@ -149,6 +150,54 @@ UserRouter.get("/:id", (req: Request, res: Response<ResponseBody<string | User>>
     })
     .catch((err) => {
         res.status(500).json({
+            data: "An unexpected error occured. Please try again"
+        });
+    });
+});
+
+/**
+ * Update a user's data by their id
+ */
+UserRouter.put("/:id", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    verifyAndRefreshJWTFromRequestCookie(req, res, next);
+}, async (req: Request, res: Response<ResponseBody<string | User>>) => {
+    const paramId: number = Number.parseInt(req.params.id);
+
+    if (Number.isNaN(paramId)) {
+        res.status(400).json({
+            data: "invalid id format detected"
+        });
+        return;
+    }
+
+    const { firstName, lastName }: UpdateUserData = req.body;
+
+    if (!checkStringValidity(firstName)) {
+        return res.status(400).json({
+            data: "invalid first name format"
+        });
+    }
+
+    if (!checkStringValidity(lastName)) {
+        return res.status(400).json({
+            data: "invalid last name format"
+        });
+    }
+
+    await UserDAO.updateUserById(paramId, firstName, lastName)
+    .then((updatedUser) => {
+        if (updatedUser === undefined) {
+            return res.status(404).json({
+                data: "Ok"
+            });
+        }
+
+        return res.status(200).json({
+            data: updatedUser
+        });
+    })
+    .catch((err) => {
+        return res.status(500).json({
             data: "An unexpected error occured. Please try again"
         });
     });
@@ -182,5 +231,14 @@ const checkPasswordValidity = (password: string): boolean => {
     const passwordRegex: RegExp = /(?=.*[A-Z]+)(?=.*[a-z]+)(?=.*[0-9]+)(?=.*[\ !\"#$%&\'()*+,-./:;<=>?@\[\\\]^_`{|}~])(.){8,}/g;
     return password !== undefined && password !== null && password.search(passwordRegex) !== -1;
 };
+
+/**
+ * Checks if a given string is valid (Defined, and at least one character)
+ * @param toCheck string to check
+ * @returns true if it is valid, else false
+ */
+const checkStringValidity = (toCheck: string): boolean => {
+    return toCheck !== undefined && toCheck !== null && toCheck !== "undefined" && toCheck !== "null" && toCheck.length > 1;
+}
 
 export default UserRouter;
