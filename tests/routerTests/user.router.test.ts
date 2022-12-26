@@ -9,6 +9,7 @@ import { NextFunction, Response } from "express";
 import { users } from "../../mockData/users.data";
 import ResponseBody from "../../models/response/responseBody.model";
 import { checkIfUserSessionCookieIsPresent, checkIfUserSessionCookieIsNotPresent } from "../reusableTests/userSessionCookie.test";
+import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById } from "../mocks/dao/user.dao.mock";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
@@ -40,12 +41,12 @@ describe("User Router (Valid Data)", () => {
             lastName: "User"
         };
 
-        UserDao.createUser = jest.fn().mockImplementation((): Promise<User> => {
-            return Promise.resolve({
-                    ...newUserData,
-                    id: 1,
-                    createdOnDate: new Date()
-                });
+        UserDao.createUser = jest.fn().mockImplementation(() => {
+            return mockCreateUser(newUserData.email,
+                newUserData.password,
+                newUserData.firstName,
+                newUserData.lastName,
+                true);
         });
 
         await tester.post(userRouterLink)
@@ -68,14 +69,8 @@ describe("User Router (Valid Data)", () => {
             password: "P@ssword123"
         };
 
-        UserDao.checkUserCredentialsForLogin = jest.fn().mockImplementation((): Promise<User> => {
-            return Promise.resolve({
-                    email: userCredentialsData.email,
-                    firstName: "Test",
-                    lastName: "User",
-                    createdOnDate: new Date(),
-                    id: 1
-                });
+        UserDao.checkUserCredentialsForLogin = jest.fn().mockImplementation(() => {
+            return mockCheckUserCredentialsForLogin(userCredentialsData.email, userCredentialsData.password, true);
         });
 
         verifyJWTTokenFromRequestCookie.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
@@ -119,7 +114,7 @@ describe("User Router (Valid Data)", () => {
         });
 
         UserDao.getUserById = jest.fn().mockImplementation(() => {
-            return Promise.resolve(user);
+            return mockGetUserById(user.id, true);
         });
 
         await tester.get(`${userRouterLink}/${user.id}`)
@@ -269,8 +264,8 @@ describe("User Router (Invalid Data)", () => {
             password: "P@ssword123"
         };
 
-        UserDao.checkUserCredentialsForLogin = jest.fn().mockImplementation((): Promise<undefined> => {
-            return Promise.resolve(undefined);
+        UserDao.checkUserCredentialsForLogin = jest.fn().mockImplementation(() => {
+            return mockCheckUserCredentialsForLogin(userLoginData.email, userLoginData.password, false);
         });
 
         await tester.post(`${userRouterLink}/login`)
@@ -364,7 +359,7 @@ describe("User Router (Invalid Data)", () => {
         });
 
         UserDao.getUserById = jest.fn().mockImplementation(() => {
-            return Promise.resolve(undefined);
+            return mockGetUserById(1, false);
         });
 
         await tester.get(`${userRouterLink}/${1}`)
