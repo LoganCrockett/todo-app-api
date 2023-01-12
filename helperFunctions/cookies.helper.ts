@@ -72,7 +72,7 @@ export function verifyAndRefreshJWTFromRequestCookie(req: Request, res: Response
 /**
  * Verifies that a JWT cookie from a request is valid (Used only for the inital login route)
  * 
- * If there is a valid toekn present, then returns a status code of 400
+ * If there is a valid token present, then returns a status code of 400
  * 
  * @param req  request we are checking
  * @param res response object

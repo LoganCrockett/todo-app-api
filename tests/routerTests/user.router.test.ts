@@ -3,30 +3,23 @@ import supertest from "supertest";
 import NewUserData, { NewUserTestData } from "../../models/request/user/NewUserData.model";
 import UserDao from "../../dao/user.dao";
 import UserLoginCredentials, { UserLoginTestCredentials } from "../../models/request/user/UserLoginCredentials.model";
-import * as userAuthFunctions from "../../helperFunctions/cookies.helper";
-import { NextFunction, Response } from "express";
+import { NextFunction, Response, Request } from "express";
 import { users } from "../../mockData/users.data";
 import ResponseBody from "../../models/response/responseBody.model";
 import { checkIfUserSessionCookieIsPresent, checkIfUserSessionCookieIsNotPresent } from "../reusableTests/userSessionCookie.test";
 import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById, mockUpdateUserById } from "../mocks/dao/user.dao.mock";
 import UpdateUserData from "../../models/request/user/UpdateUserData.model";
+import { addCookieToResponseSpy, mockAddCookieToResponse, mockVerifyAndRefreshJWTFromRequestCookie, mockVerifyJWTTokenFromRequestCookie, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
+import { checkAddCookieToResponse, checkAddCookieToResponseWasNotCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled, checkVerifyJWTTokenFromRequestCookieSpyWasCalled, checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled } from "../reusableTests/cookies.test";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
-
-let addCookieToResponseSpy: jest.SpyInstance;
-let verifyAndRefreshJWTFromRequestCookie: jest.SpyInstance;
-let verifyJWTTokenFromRequestCookie: jest.SpyInstance;
 
 beforeEach(() => {
     UserDao.createUser = jest.fn();
     UserDao.checkUserCredentialsForLogin = jest.fn();
     UserDao.getUserById = jest.fn();
     UserDao.updateUserById = jest.fn();
-
-    addCookieToResponseSpy = jest.spyOn(userAuthFunctions, "addCookieToResponse");
-    verifyAndRefreshJWTFromRequestCookie = jest.spyOn(userAuthFunctions, "verifyAndRefreshJWTFromRequestCookie");
-    verifyJWTTokenFromRequestCookie = jest.spyOn(userAuthFunctions, "verifyJWTTokenFromRequestCookie");
 });
 
 afterEach(() => {
@@ -59,6 +52,12 @@ describe("User Router (Valid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
+            checkAddCookieToResponseWasNotCalled();
+
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled();
+
+            checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled();
+
             expect(UserDao.createUser).toHaveBeenCalledTimes(1);
             expect(UserDao.createUser).toHaveBeenCalledWith(newUserData.email, newUserData.password, newUserData.firstName, newUserData.lastName);
         });
@@ -74,12 +73,12 @@ describe("User Router (Valid Data)", () => {
             return mockCheckUserCredentialsForLogin(userCredentialsData.email, userCredentialsData.password, true);
         });
 
-        verifyJWTTokenFromRequestCookie.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-            next();
+        verifyJWTTokenFromRequestCookieSpy.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+            mockVerifyJWTTokenFromRequestCookie(req, res, next, true);
         });
 
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
         await tester.post(`${userRouterLink}/login`)
@@ -91,13 +90,11 @@ describe("User Router (Valid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
-            expect(verifyJWTTokenFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyJWTTokenFromRequestCookie).toReturn();
+            checkVerifyJWTTokenFromRequestCookieSpyWasCalled();
 
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(1);
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenLastCalledWith(userCredentialsData.email, userCredentialsData.password);
@@ -106,12 +103,11 @@ describe("User Router (Valid Data)", () => {
 
     test.each(users)("Getting User by Id", async (user) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         UserDao.getUserById = jest.fn().mockImplementation(() => {
@@ -126,11 +122,9 @@ describe("User Router (Valid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("object");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
@@ -141,12 +135,11 @@ describe("User Router (Valid Data)", () => {
 
     test("Updating User by Id", async () => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         const updateUserData: UpdateUserData = {
@@ -170,11 +163,9 @@ describe("User Router (Valid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("object");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
@@ -333,11 +324,21 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
+            checkAddCookieToResponseWasNotCalled();
+
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled();
+
+            checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled();
+
             expect(UserDao.createUser).not.toBeCalled();
         })
     });
 
     test.each(invalidLoginCredentials)("User Log In (Invalid email & password)", async (inputData) => {
+        verifyJWTTokenFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyJWTTokenFromRequestCookie(req, res, next, true);
+        });
+
         await tester.post(`${userRouterLink}/login`)
         .set("Content-Type", "application/json")
         .send(inputData)
@@ -349,8 +350,9 @@ describe("User Router (Invalid Data)", () => {
 
             checkIfUserSessionCookieIsNotPresent(res);
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(0);
-            expect(addCookieToResponseSpy).not.toReturn();
+            checkAddCookieToResponseWasNotCalled();
+
+            checkVerifyJWTTokenFromRequestCookieSpyWasCalled();
 
             expect(UserDao.checkUserCredentialsForLogin).not.toBeCalled();
         });
@@ -366,6 +368,10 @@ describe("User Router (Invalid Data)", () => {
             return mockCheckUserCredentialsForLogin(userLoginData.email, userLoginData.password, false);
         });
 
+        verifyJWTTokenFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyJWTTokenFromRequestCookie(req, res, next, true);
+        });
+
         await tester.post(`${userRouterLink}/login`)
         .set("Content-Type", "application/json")
         .send(userLoginData)
@@ -377,8 +383,9 @@ describe("User Router (Invalid Data)", () => {
 
             checkIfUserSessionCookieIsNotPresent(res);
 
-            expect(addCookieToResponseSpy).toBeCalledTimes(0);
-            expect(addCookieToResponseSpy).not.toReturn();
+            checkAddCookieToResponseWasNotCalled();
+
+            checkVerifyJWTTokenFromRequestCookieSpyWasCalled();
 
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(1);
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledWith(userLoginData.email, userLoginData.password);
@@ -391,11 +398,8 @@ describe("User Router (Invalid Data)", () => {
             password: "P@ssword123"
         };
 
-        verifyJWTTokenFromRequestCookie.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-            res.status(400).json({
-                data: "user already logged in"
-            });
-            return;
+        verifyJWTTokenFromRequestCookieSpy.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+            mockVerifyJWTTokenFromRequestCookie(req, res, next, false);
         });
 
         await tester.post(`${userRouterLink}/login`)
@@ -409,8 +413,9 @@ describe("User Router (Invalid Data)", () => {
 
             checkIfUserSessionCookieIsNotPresent(res);
 
-            expect(verifyJWTTokenFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyJWTTokenFromRequestCookie).toReturn();
+            checkVerifyJWTTokenFromRequestCookieSpyWasCalled();
+
+            checkAddCookieToResponseWasNotCalled();
 
             expect(UserDao.checkUserCredentialsForLogin).toHaveBeenCalledTimes(0);
         });
@@ -418,12 +423,11 @@ describe("User Router (Invalid Data)", () => {
 
     test.each(invalidUserIds)("Getting User by Id (Invalid)", async (id) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         await tester.get(`${userRouterLink}/${id}`)
@@ -434,11 +438,9 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
@@ -448,12 +450,11 @@ describe("User Router (Invalid Data)", () => {
 
     test("Getting User by Id (Does not exist)", async () => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         UserDao.getUserById = jest.fn().mockImplementation(() => {
@@ -468,11 +469,9 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
@@ -483,12 +482,11 @@ describe("User Router (Invalid Data)", () => {
 
     test.each(invalidUserIds)("Updating user by Id (Invalid Id's)", async (id) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         await tester.put(`${userRouterLink}/${id}`)
@@ -499,11 +497,9 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
@@ -513,12 +509,11 @@ describe("User Router (Invalid Data)", () => {
 
     test.each(invalidUpdateUserData)("Updating user by Id (Invalid Update Data)", async ({ id, firstName, lastName }) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         await tester.put(`${userRouterLink}/${id}`)
@@ -533,11 +528,9 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
@@ -547,12 +540,11 @@ describe("User Router (Invalid Data)", () => {
 
     test("Updating User by Id (Does not exist)", async () => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
+            mockAddCookieToResponse(res, {});
         });
 
-        verifyAndRefreshJWTFromRequestCookie.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            userAuthFunctions.addCookieToResponse(res, {});
-            next();
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
         });
 
         const updateUserData: UpdateUserData = {
@@ -576,11 +568,9 @@ describe("User Router (Invalid Data)", () => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
 
-            expect(verifyAndRefreshJWTFromRequestCookie).toHaveBeenCalledTimes(1);
-            expect(verifyAndRefreshJWTFromRequestCookie).toReturn();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
-            expect(addCookieToResponseSpy).toHaveBeenCalledTimes(1);
-            expect(addCookieToResponseSpy).toReturn();
+            checkAddCookieToResponse();
 
             checkIfUserSessionCookieIsPresent(res);
 
