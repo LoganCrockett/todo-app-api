@@ -29,6 +29,8 @@ export function addCookieToResponse(res: Response, payload: {}): void {
  * If so, it passes the request onto the next handler;
  * otherwise, it returns a 401 (Unaouthorized)
  * @param req req we are checking
+ * @param res response object
+ * @param next next function to call if we finish with all of our checks
  */
 export function verifyAndRefreshJWTFromRequestCookie(req: Request, res: Response<ResponseBody<string>>, next: NextFunction) {
     const token = req.signedCookies.userSession;

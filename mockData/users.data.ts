@@ -68,7 +68,7 @@ userUpdates.push({
 
 export const userPasswordResetData = users.map((user, index) => {
     return {
-        email: user.email,
+        id: user.id,
         password: userPasswordData[index].password,
         newPassword: "newPassword",
         expected: true
@@ -77,7 +77,7 @@ export const userPasswordResetData = users.map((user, index) => {
 
 // Should Not Exist
 userPasswordResetData.push({
-    email: "fakeuser@email.com",
+    id: -1,
     password: "password",
     newPassword: "newPassword",
     expected: false

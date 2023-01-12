@@ -108,7 +108,7 @@ describe("User DAO Tests", () => {
     });
 
     test.each(userPasswordResetData)("Password Reset", async (data) => {
-        await UserDAO.resetUserPassword(data.email, data.password, data.newPassword)
+        await UserDAO.resetUserPassword(data.id, data.password, data.newPassword)
         .then((res: boolean) => {
             expect(res).toBeDefined();
             data.expected ? expect(res).toBeTruthy() : expect(res).toBeFalsy();

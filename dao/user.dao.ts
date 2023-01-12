@@ -99,16 +99,15 @@ export default class UserDAO {
     }
 
     /**
-     * Resets a user's password based on their email & old password
+     * Resets a user's password based on their id & old password
      * @param email user's email
      * @param oldPassword user's current password
      * @param newPassword new password
      * @returns true if updated successfully; otherwise, false
      */
-    public static async resetUserPassword(email: string, oldPassword: string, newPassword: string): Promise<boolean> {
+    public static async resetUserPassword(id: number, oldPassword: string, newPassword: string): Promise<boolean> {
         return await sql.begin(async (sql) => {
-            const currentPasswordHash = await sql`select uc.password from todo."userCredentials" uc join todo.users u on u.id = uc."userId"
-            where u.email = ${email}`;
+            const currentPasswordHash = await sql`select uc.password from todo."userCredentials" uc where uc."userId" = ${id}`;
 
             if (currentPasswordHash === undefined || currentPasswordHash.length !== 1) {
                 return false;
@@ -123,8 +122,8 @@ export default class UserDAO {
                     })
                     .then(async (newPasswordHash) => {
                         const res = await sql`update todo."userCredentials" uc
-                        set password = ${newPasswordHash} from todo.users u
-                        where u.id = uc."userId" and u.email = ${email} and uc.password = ${currentPasswordHash[0].password}`;
+                        set password = ${newPasswordHash}
+                        where uc."userId" = ${id} and uc.password = ${currentPasswordHash[0].password}`;
 
                         return res.count === 1;
                     })
