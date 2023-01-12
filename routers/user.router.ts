@@ -6,6 +6,7 @@ import UserLoginCredentials from "../models/request/user/UserLoginCredentials.mo
 import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie, verifyJWTTokenFromRequestCookie } from "../helperFunctions/cookies.helper";
 import User from "../models/users/user.model";
 import UpdateUserData from "../models/request/user/UpdateUserData.model";
+import ResetUserPasswordData from "../models/request/user/ResetUserPasswordData.model";
 
 // Should match to /user
 const UserRouter: Router = Router({
@@ -202,6 +203,56 @@ UserRouter.put("/:id", (req: Request, res: Response<ResponseBody<string>>, next:
         });
     });
 });
+
+/**
+ * Resets a user's password by their id
+ */
+UserRouter.put("/:id/resetUserPassword", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    verifyAndRefreshJWTFromRequestCookie(req, res, next);
+}, async (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    const paramId: number = Number.parseInt(req.params.id);
+
+    if (Number.isNaN(paramId)) {
+        res.status(400).json({
+            data: "Invlaid Id format detected"
+        });
+        return;
+    }
+
+    const { oldPassword, newPassword }: ResetUserPasswordData = req.body;
+
+    if (!checkPasswordValidity(oldPassword) || !checkPasswordValidity(newPassword)) {
+        res.status(400).json({
+            data: "Invalid password format detected"
+        });
+        return;
+    }
+
+    if (oldPassword === newPassword) {
+        res.status(400).json({
+            data: "Invalid password format detected"
+        });
+        return;
+    }
+
+    await UserDAO.resetUserPassword(paramId, oldPassword, newPassword)
+    .then((wasSuccessful) => {
+        if (wasSuccessful) {
+            return res.status(200).json({
+                data: "Sucessfully reset password"
+            });
+        }
+
+        return res.status(500).json({
+            data: "An unexpected error occured. Please try again."
+        });
+    })
+    .catch((err) => {
+        return res.status(500).json({
+            data: "An unexpected error occured. Please try again."
+        });
+    })
+})
 
 /**
  * Checks if a given email is the valid format

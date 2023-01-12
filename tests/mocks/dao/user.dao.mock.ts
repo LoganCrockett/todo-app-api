@@ -92,3 +92,15 @@ export function mockUpdateUserById(id: number, firstName: string, lastName: stri
     }
     return Promise.resolve(undefined);
 }
+
+/**
+ * Mocks the resetUserPassword method from the UserDAO
+ * @param id user's id
+ * @param oldPassword user's old password
+ * @param newPassword user's new password
+ * @param shouldResolve if the mock should return successfully, or not
+ * @returns Promise with a boolean, denoting if it was successful or not
+ */
+export function mockResetUserPassword(id: number, oldPassword: string, newPassword: string, shouldResolve: boolean): Promise<boolean> {
+    return Promise.resolve(shouldResolve);
+}

@@ -7,7 +7,7 @@ import { NextFunction, Response, Request } from "express";
 import { users } from "../../mockData/users.data";
 import ResponseBody from "../../models/response/responseBody.model";
 import { checkIfUserSessionCookieIsPresent, checkIfUserSessionCookieIsNotPresent } from "../reusableTests/userSessionCookie.test";
-import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById, mockUpdateUserById } from "../mocks/dao/user.dao.mock";
+import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById, mockResetUserPassword, mockUpdateUserById } from "../mocks/dao/user.dao.mock";
 import UpdateUserData from "../../models/request/user/UpdateUserData.model";
 import { addCookieToResponseSpy, mockAddCookieToResponse, mockVerifyAndRefreshJWTFromRequestCookie, mockVerifyJWTTokenFromRequestCookie, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
 import { checkAddCookieToResponse, checkAddCookieToResponseWasNotCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled, checkVerifyJWTTokenFromRequestCookieSpyWasCalled, checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled } from "../reusableTests/cookies.test";
@@ -20,6 +20,7 @@ beforeEach(() => {
     UserDao.checkUserCredentialsForLogin = jest.fn();
     UserDao.getUserById = jest.fn();
     UserDao.updateUserById = jest.fn();
+    UserDao.resetUserPassword = jest.fn();
 });
 
 afterEach(() => {
@@ -174,7 +175,46 @@ describe("User Router (Valid Data)", () => {
         });
     });
 
-    test.todo("Reseting User Password");
+    test("Reseting User Password", async () => {
+        const updateUserPasswordData = {
+            id: 1,
+            oldPassword: "P@ssword1234",
+            newPassword: "P@ssword12345"
+        };
+
+        UserDao.resetUserPassword = jest.fn().mockImplementation(() => {
+            return mockResetUserPassword(updateUserPasswordData.id, updateUserPasswordData.oldPassword, updateUserPasswordData.newPassword, true);
+        });
+
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            mockAddCookieToResponse(res, {});
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        await tester.put(`${userRouterLink}/${updateUserPasswordData.id}/resetUserPassword`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .send({
+            oldPassword: updateUserPasswordData.oldPassword,
+            newPassword: updateUserPasswordData.newPassword
+        })
+        .expect(200)
+        .then((res) => {
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(res.body).toBeDefined();
+            expect(typeof res.body.data).toEqual("string");
+
+            expect(UserDao.resetUserPassword).toBeCalledTimes(1);
+            expect(UserDao.resetUserPassword).toBeCalledWith(updateUserPasswordData.id, updateUserPasswordData.oldPassword, updateUserPasswordData.newPassword);
+        });
+    });
     
 });
 
@@ -312,6 +352,54 @@ const invalidUpdateUserData = [
         lastName: ""
     },
 ]
+
+const invalidPasswordResetData = [
+    {
+        id: 1,
+        oldPassword: undefined,
+        newPassword: "P@ssword1234"
+    },
+    {
+        id: 1,
+        oldPassword: null,
+        newPassword: "P@ssword1234"
+    },
+    {
+        id: 1,
+        oldPassword: "",
+        newPassword: "P@ssword1234"
+    },
+    {
+        id: 1,
+        oldPassword: "password",
+        newPassword: "P@ssword1234"
+    },
+    {
+        id: 1,
+        oldPassword: "P@ssword1234",
+        newPassword: undefined
+    },
+    {
+        id: 1,
+        oldPassword: "P@ssword1234",
+        newPassword: null
+    },
+    {
+        id: 1,
+        oldPassword: "P@ssword1234",
+        newPassword: ""
+    },
+    {
+        id: 1,
+        oldPassword: "P@ssword1234",
+        newPassword: "password"
+    },
+    {
+        id: 1,
+        oldPassword: "P@ssword1234",
+        newPassword: "P@ssword1234"
+    }
+];
 
 describe("User Router (Invalid Data)", () => {
     test.each(invalidNewUserData)("Creating New User (Invalid)", async (inputData) => {
@@ -579,5 +667,60 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.todo("Reseting User Password (Invalid Data)");
+    test.each(invalidUserIds)("Reseting User Password (Invalid User Id)", async (id) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            mockAddCookieToResponse(res, {});
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        await tester.put(`${userRouterLink}/${id}/resetUserPassword`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .send()
+        .expect(400)
+        .then((res) => {
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(res.body).toBeDefined();
+            expect(typeof res.body.data).toEqual("string");
+
+            expect(UserDao.resetUserPassword).not.toBeCalled();
+        });
+    });
+
+    test.each(invalidPasswordResetData)("Reseting User Password (Invalid Data)", async (data) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
+            mockAddCookieToResponse(res, {});
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        await tester.put(`${userRouterLink}/${data.id}/resetUserPassword`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .send({
+            oldPassword: data.oldPassword,
+            newPassword: data.newPassword
+        })
+        .expect(400)
+        .then((res) => {
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+
+            checkIfUserSessionCookieIsPresent(res);
+
+            expect(res.body).toBeDefined();
+            expect(typeof res.body.data).toEqual("string");
+
+            expect(UserDao.resetUserPassword).not.toBeCalled();
+        });
+    });
 });
