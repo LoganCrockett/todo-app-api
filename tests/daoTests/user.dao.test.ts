@@ -2,6 +2,15 @@ import { PostgresError } from "postgres";
 import UserDAO from "../../dao/user.dao";
 import { emailAndPasswordData, userIds, userPasswordResetData, userUpdates } from "../../mockData/users.data";
 import User from "../../models/users/user.model";
+import { insertUsersAndCredentials, removeUsersAndCredentials } from "../mocks/db.setup";
+
+beforeEach(async () => {
+    await insertUsersAndCredentials();
+});
+
+afterEach(async () => {
+    await removeUsersAndCredentials();
+});
 
 describe("User DAO Tests", () => {
     test("Creating New User", async () => {
