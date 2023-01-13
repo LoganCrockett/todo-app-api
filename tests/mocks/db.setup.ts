@@ -3,6 +3,7 @@ import argon2 from "argon2";
 import argon2Options from "../../helperFunctions/argon2Options.helper";
 import { userPasswordData, users } from "../../mockData/users.data";
 import { UserCredentials } from "../../models/users/user.model";
+import { todoLists } from "../../mockData/todoList.data";
 
 /**
  * Inserts user's data & their credentials into the DB for testing;
@@ -47,4 +48,32 @@ export async function removeUsersAndCredentials() {
         console.log(err.message);
         sql.end();
     })
+}
+
+/**
+ * Inserts todo lists into the DB for testing
+ */
+export async function insertTodoLists() {
+    await sql.begin(async () => {
+        await sql`insert into todo.list ${ sql(todoLists, "id", "name", "createdOnDate", "lastUpdatedDate", "createdBy") }`;
+    })
+    .catch((err) => {
+        console.log("An error occured while inserting lists");
+        console.log(err.message);
+        sql.end();
+    });
+}
+
+/**
+ * Removes todo lists from the DB for testing
+ */
+export async function removeTodoLists() {
+    await sql.begin(async () => {
+        await sql`delete from todo.list`;
+    })
+    .catch((err) => {
+        console.log("An error occured while removing lists");
+        console.log(err.message);
+        sql.end();
+    });
 }
