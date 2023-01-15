@@ -34,9 +34,9 @@ export default class TodoListDAO {
      * @param userId user id AKA the creator
      * @param page page we are fetching
      * @param perPage number of elements to grab per page
-     * @returns Promise containg the page of lists; otherwise, undefined
+     * @returns Promise containg the page of lists
      */
-    public static async getListByPage(userId: number, page: number, perPage: number): Promise<Page<Array<TodoList>>> {
+    public static async getListByPage(userId: number, page: number, perPage: number): Promise<Page<TodoList>> {
         return await sql.begin(async () => {
             // Note: Subtract one from the page in order to crrectly grab all data
             const list = await sql<TodoList[]>`
@@ -51,7 +51,7 @@ export default class TodoListDAO {
             where l."createdBy" = ${userId}
             `;
 
-            const pagedData: Page<Array<TodoList>> = {
+            const pagedData: Page<TodoList> = {
                 page,
                 perPage,
                 totalPages: getTotalPages(count.count, perPage),

@@ -1,3 +1,6 @@
+import getTotalPages from "../../../helperFunctions/pageFunctions.helper";
+import { todoLists } from "../../../mockData/todoList.data";
+import Page from "../../../models/Page";
 import TodoList from "../../../models/todoList/TodoList.model";
 
 /**
@@ -19,6 +22,31 @@ export function mockCreateNewList(name: string, createdBy: number, shouldResolve
     }
     
     return Promise.reject("Mocking a SQL Error");
+}
+
+/**
+ * Mocks the getListByPage function on the TodoListDAO
+ * @param userId user AKA creator Id
+ * @param page page we are fetching
+ * @param perPage how many elements per page we want
+ * @param shouldResolve if we should return successfully, or return an error
+ * @returns Promise with a fake page object; otherwise, an error
+ */
+export function mockGetListByPage(userId: number, page: number, perPage: number, shouldResolve: boolean): Promise<Page<TodoList>> {
+    if (shouldResolve) {
+        const listsForUser = todoLists.filter((list) => {
+            return list.createdBy === userId;
+        });
+
+        return Promise.resolve({
+            page: page,
+            perPage: perPage,
+            totalPages: getTotalPages(listsForUser.length, perPage),
+            data: listsForUser
+        });
+    }
+
+    return Promise.reject("Mocking a SQL error");
 }
 
 /**

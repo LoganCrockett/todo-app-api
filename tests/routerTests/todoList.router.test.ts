@@ -2,10 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import supertest from "supertest";
 import TodoListDAO from "../../dao/todoList.dao";
 import { todoLists } from "../../mockData/todoList.data";
+import { users } from "../../mockData/users.data";
+import Page from "../../models/Page";
 import TodoList from "../../models/todoList/TodoList.model";
 import User from "../../models/users/user.model";
-import { addCookieToResponseSpy, getPayloadFromJWTSpy, mockAddCookieToResponse, mockGetPayloadFromJWT, mockVerifyAndRefreshJWTFromRequestCookie, verifyAndRefreshJWTFromRequestCookieSpy } from "../mocks/cookies.mock";
-import { mockCreateNewList, mockDeleteListById, mockUpdateListById } from "../mocks/dao/todoList.dao.mock";
+import { addCookieToResponseSpy, getPayloadFromJWTSpy, mockAddCookieToResponse, mockGetPayloadFromJWT, mockVerifyAndRefreshJWTFromRequestCookie, testUserForJWT, verifyAndRefreshJWTFromRequestCookieSpy } from "../mocks/cookies.mock";
+import { mockCreateNewList, mockDeleteListById, mockGetListByPage, mockUpdateListById } from "../mocks/dao/todoList.dao.mock";
 import { checkAddCookieToResponse, checkGetJWTFromPayloadWasCalled, checkGetJWTFromPayloadWasNotCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled } from "../reusableTests/cookies.test";
 import { checkIfUserSessionCookieIsPresent } from "../reusableTests/userSessionCookie.test";
 const server = require("../../server");
@@ -16,6 +18,7 @@ const tester = supertest(server);
 TodoListDAO.createNewList = jest.fn();
 TodoListDAO.updateListById = jest.fn();
 TodoListDAO.deleteListById = jest.fn();
+TodoListDAO.getListByPage = jest.fn();
 
 afterEach(() => {
     jest.clearAllMocks();
@@ -130,6 +133,54 @@ describe("Todo List Router Tests (Valid)", () => {
             expect(TodoListDAO.deleteListById).toBeCalledWith(list.id);
         });
     });
+
+    test("Getting a page of Lists (Valid)", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        getPayloadFromJWTSpy.mockImplementation((req: Request) => {
+            return mockGetPayloadFromJWT(req, true);
+        });
+
+        TodoListDAO.getListByPage = jest.fn().mockImplementation((userId: number, page: number, perPage: number) => {
+            return mockGetListByPage(userId, page, perPage, true);
+        });
+
+        const listsForUser = todoLists.filter((list) => {
+            return list.createdBy === testUserForJWT.id
+        });
+
+        await tester.get(`${todoListRouterLink}`)
+        .set("Content-Type", "application/json")
+        .send({
+            page: 1,
+            perPage: 20
+        })
+        .expect("Content-Type", /json/)
+        .expect(200)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            const pagedLists: Page<TodoList> = res.body.data;
+
+            expect(pagedLists.page).toEqual(1);
+            expect(pagedLists.perPage).toEqual(20);
+            expect(pagedLists.totalPages).toBeDefined();
+            expect(pagedLists.data.length).toEqual(listsForUser.length);
+
+            checkIfUserSessionCookieIsPresent(res);
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+            checkGetJWTFromPayloadWasCalled(false);
+
+            expect(TodoListDAO.getListByPage).toBeCalled();
+            expect(TodoListDAO.getListByPage).toBeCalledWith(testUserForJWT.id, 1, 20);
+        });
+    });
 });
 
 const invalidNewListData = [
@@ -150,6 +201,41 @@ const invalidIds = [
     undefined,
     null,
     "name"
+];
+
+const invalidPageParameters = [
+    {
+        page: undefined,
+        perPage: 20
+    },
+    {
+        page: null,
+        perPage: 20
+    },
+    {
+        page: "undefined",
+        perPage: 20
+    },
+    {
+        page: 0,
+        perPage: 20
+    },
+    {
+        page: 1,
+        perPage: undefined
+    },
+    {
+        page: 1,
+        perPage: null
+    },
+    {
+        page: 1,
+        perPage: "undefined"
+    },
+    {
+        page: 1,
+        perPage: 0
+    }
 ];
 
 describe("Todo List Router Tests (Invalid)", () => {
@@ -246,6 +332,108 @@ describe("Todo List Router Tests (Invalid)", () => {
 
             expect(TodoListDAO.createNewList).toBeCalledTimes(1);
             expect(TodoListDAO.createNewList).toReturn();
+        });
+    });
+
+    test("Getting a page of Lists (User Id Error)", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        getPayloadFromJWTSpy.mockImplementation((req: Request) => {
+            return mockGetPayloadFromJWT(req, false);
+        });
+
+        await tester.get(`${todoListRouterLink}`)
+        .set("Content-Type", "application/json")
+        .send()
+        .expect("Content-Type", /json/)
+        .expect(500)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect (typeof res.body.data).toMatch("string");
+
+            checkIfUserSessionCookieIsPresent(res);
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+            checkGetJWTFromPayloadWasCalled(true);
+
+            expect(TodoListDAO.getListByPage).not.toBeCalled();
+        });
+    });
+
+    test.each(invalidPageParameters)("Getting a page of Lists (Invalid Parameters)", async (parameters) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        getPayloadFromJWTSpy.mockImplementation((req: Request) => {
+            return mockGetPayloadFromJWT(req, true);
+        });
+
+        await tester.get(`${todoListRouterLink}`)
+        .set("Content-Type", "application/json")
+        .send({
+            parameters
+        })
+        .expect("Content-Type", /json/)
+        .expect(400)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect (typeof res.body.data).toMatch("string");
+
+            checkIfUserSessionCookieIsPresent(res);
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+            checkGetJWTFromPayloadWasCalled(false);
+
+            expect(TodoListDAO.getListByPage).not.toBeCalled();
+        });
+    });
+
+    test("Getting a Page of Lists (SQL Error)", async () => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        getPayloadFromJWTSpy.mockImplementation((req: Request) => {
+            return mockGetPayloadFromJWT(req, true);
+        });
+
+        TodoListDAO.getListByPage = jest.fn().mockImplementation((userId: number, page: number, perPage: number) => {
+            return mockGetListByPage(userId, page, perPage, false);
+        });
+
+        await tester.get(`${todoListRouterLink}`)
+        .set("Content-Type", "application/json")
+        .send({
+            page: 1,
+            perPage: 20
+        })
+        .expect("Content-Type", /json/)
+        .expect(500)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect (typeof res.body.data).toMatch("string");
+
+            checkIfUserSessionCookieIsPresent(res);
+            checkAddCookieToResponse();
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+            checkGetJWTFromPayloadWasCalled(false);
+
+            expect(TodoListDAO.getListByPage).toBeCalled();
         });
     });
 

@@ -2,6 +2,8 @@ import { Request, Response, NextFunction, Router } from "express";
 import TodoListDAO from "../dao/todoList.dao";
 import { getPayloadFromJWT, verifyAndRefreshJWTFromRequestCookie } from "../helperFunctions/cookies.helper";
 import { checkStringValidity } from "../helperFunctions/validationFunctions.helper";
+import Page from "../models/Page";
+import PageParameters from "../models/request/PageParameters.model";
 import NewTodoListData from "../models/request/todoList/NewTodoListData.model";
 import ResponseBody from "../models/response/responseBody.model";
 import TodoList from "../models/todoList/TodoList.model";
@@ -45,6 +47,62 @@ TodoListRouter.post("", (req: Request, res: Response<ResponseBody<string>>, next
             data: " An unexpected error occured. Please try again."
         });
     });
+});
+
+/**
+ * Get's a page of list based of the creator id (AKA User)
+ */
+TodoListRouter.get("", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    verifyAndRefreshJWTFromRequestCookie(req, res, next);
+}, async (req: Request, res: Response<ResponseBody<string | Page<TodoList>>>, next: NextFunction) => {
+    const currentLoggedInUser = getPayloadFromJWT(req) as User;
+
+    if (currentLoggedInUser === undefined || currentLoggedInUser.id === undefined || currentLoggedInUser.id === null) {
+        return res.status(500).json({
+            data: " An unexpected error occured. Please try again."
+        });
+    }
+
+    const parameters: PageParameters = {
+        page: Number.parseInt(req.body.page),
+        perPage: Number.parseInt(req.body.perPage)
+    };
+
+    if (Number.isNaN(parameters.page)) {
+        return res.status(400).json({
+            data: "page cannot be null"
+        });
+    }
+
+    if (parameters.page < 1) {
+        return res.status(400).json({
+            data: "page cannot start before 1"
+        });
+    }
+
+    if (Number.isNaN(parameters.perPage)) {
+        return res.status(400).json({
+            data: "perPage cannot be null"
+        });
+    }
+
+    if (parameters.perPage < 1) {
+        return res.status(400).json({
+            data: "perPage cannot start before 1"
+        });
+    }
+
+    await TodoListDAO.getListByPage(currentLoggedInUser.id, parameters.page, parameters.perPage)
+    .then((pagedLists) => {
+        return res.status(200).json({
+            data: pagedLists
+        });
+    })
+    .catch((err) => {
+        return res.status(500).json({
+            data: "An unexpected error occured. Please try again"
+        });
+    })
 });
 
 /**

@@ -5,5 +5,5 @@ export default interface Page<t> {
     page: number;
     perPage: number;
     totalPages: number;
-    data: t
+    data: Array<t>
 };
