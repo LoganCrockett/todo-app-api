@@ -1,17 +1,28 @@
 import { Request, Response, NextFunction } from "express";
+import { JwtPayload } from "jsonwebtoken";
 import * as userAuthFunctions from "../../helperFunctions/cookies.helper";
 import ResponseBody from "../../models/response/responseBody.model";
+import User from "../../models/users/user.model";
 
 export const addCookieToResponseSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "addCookieToResponse");
 export const verifyAndRefreshJWTFromRequestCookieSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "verifyAndRefreshJWTFromRequestCookie");
 export const verifyJWTTokenFromRequestCookieSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "verifyJWTTokenFromRequestCookie");
+export const getPayloadFromJWTSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "getPayloadFromJWT");
+
+export const testUserForJWT: User = {
+    id: 1,
+    firstName: "Testing",
+    lastName: "User",
+    createdOnDate: new Date(),
+    email: "example@email.com"
+};
 
 /**
  * Mocks the addCookieToResponse function
  * @param res response we are adding cookie to
  * @param payload payload to use for the cookie
  */
-export function mockAddCookieToResponse(res: Response, payload: {}): void {
+export function mockAddCookieToResponse(res: Response, payload: User): void {
     res.cookie("userSession", "example value", userAuthFunctions.cookieOptions);
 };
 /**
@@ -24,7 +35,7 @@ export function mockAddCookieToResponse(res: Response, payload: {}): void {
  */
 export function mockVerifyAndRefreshJWTFromRequestCookie(req: Request, res: Response<ResponseBody<string>>, next: NextFunction, shouldBeSuccessful: boolean): void {
     if (shouldBeSuccessful) {
-        userAuthFunctions.addCookieToResponse(res, {});
+        userAuthFunctions.addCookieToResponse(res, testUserForJWT);
         next();
         return;
     }
@@ -54,3 +65,17 @@ export function mockVerifyJWTTokenFromRequestCookie(req: Request, res: Response<
     });
     return;
 };
+
+/**
+ * Mocks the return value for the getPayloadFromJWT function
+ * @param req request
+ * @param shouldReturnValue if we should return an example payload, or undefined
+ * @returns example payload, or undefined
+ */
+export function mockGetPayloadFromJWT(req: Request, shouldReturnValue: boolean): JwtPayload | undefined {
+    if (shouldReturnValue) {
+        return testUserForJWT;
+    }
+
+    return undefined;
+}

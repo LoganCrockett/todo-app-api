@@ -7,6 +7,7 @@ import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie, verifyJWTTok
 import User from "../models/users/user.model";
 import UpdateUserData from "../models/request/user/UpdateUserData.model";
 import ResetUserPasswordData from "../models/request/user/ResetUserPasswordData.model";
+import { checkStringValidity } from "../helperFunctions/validationFunctions.helper";
 
 // Should match to /user
 const UserRouter: Router = Router({
@@ -282,14 +283,5 @@ const checkPasswordValidity = (password: string): boolean => {
     const passwordRegex: RegExp = /(?=.*[A-Z]+)(?=.*[a-z]+)(?=.*[0-9]+)(?=.*[\ !\"#$%&\'()*+,-./:;<=>?@\[\\\]^_`{|}~])(.){8,}/g;
     return password !== undefined && password !== null && password.search(passwordRegex) !== -1;
 };
-
-/**
- * Checks if a given string is valid (Defined, and at least one character)
- * @param toCheck string to check
- * @returns true if it is valid, else false
- */
-const checkStringValidity = (toCheck: string): boolean => {
-    return toCheck !== undefined && toCheck !== null && toCheck !== "undefined" && toCheck !== "null" && toCheck.length > 1;
-}
 
 export default UserRouter;

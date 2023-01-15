@@ -11,6 +11,7 @@ import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById, mock
 import UpdateUserData from "../../models/request/user/UpdateUserData.model";
 import { addCookieToResponseSpy, mockAddCookieToResponse, mockVerifyAndRefreshJWTFromRequestCookie, mockVerifyJWTTokenFromRequestCookie, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
 import { checkAddCookieToResponse, checkAddCookieToResponseWasNotCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled, checkVerifyJWTTokenFromRequestCookieSpyWasCalled, checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled } from "../reusableTests/cookies.test";
+import User from "../../models/users/user.model";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
@@ -78,8 +79,8 @@ describe("User Router (Valid Data)", () => {
             mockVerifyJWTTokenFromRequestCookie(req, res, next, true);
         });
 
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         await tester.post(`${userRouterLink}/login`)
@@ -103,8 +104,8 @@ describe("User Router (Valid Data)", () => {
     });
 
     test.each(users)("Getting User by Id", async (user) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -135,8 +136,8 @@ describe("User Router (Valid Data)", () => {
     });
 
     test("Updating User by Id", async () => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -186,8 +187,8 @@ describe("User Router (Valid Data)", () => {
             return mockResetUserPassword(updateUserPasswordData.id, updateUserPasswordData.oldPassword, updateUserPasswordData.newPassword, true);
         });
 
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -510,8 +511,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test.each(invalidUserIds)("Getting User by Id (Invalid)", async (id) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -537,8 +538,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test("Getting User by Id (Does not exist)", async () => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -569,8 +570,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test.each(invalidUserIds)("Updating user by Id (Invalid Id's)", async (id) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -596,8 +597,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test.each(invalidUpdateUserData)("Updating user by Id (Invalid Update Data)", async ({ id, firstName, lastName }) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -627,8 +628,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test("Updating User by Id (Does not exist)", async () => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -668,8 +669,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test.each(invalidUserIds)("Reseting User Password (Invalid User Id)", async (id) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
@@ -695,8 +696,8 @@ describe("User Router (Invalid Data)", () => {
     });
 
     test.each(invalidPasswordResetData)("Reseting User Password (Invalid Data)", async (data) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: {}) => {
-            mockAddCookieToResponse(res, {});
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
         });
 
         verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {

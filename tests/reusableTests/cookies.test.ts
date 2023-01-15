@@ -1,4 +1,4 @@
-import { addCookieToResponseSpy, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
+import { addCookieToResponseSpy, getPayloadFromJWTSpy, testUserForJWT, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
 
 /**
  * The purpose of this function is to act as a re-usable
@@ -52,6 +52,29 @@ export function checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled() {
 export function checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled() {
     expect(verifyAndRefreshJWTFromRequestCookieSpy).toHaveBeenCalledTimes(0);
     expect(verifyAndRefreshJWTFromRequestCookieSpy).not.toReturn();
+}
+
+/**
+ * Verify that the getJWTFromPayload function was called
+ * @param expectUndefined if we should test for an undefined return type, or the actual payload
+ */
+export function checkGetJWTFromPayloadWasCalled(expectUndefined: boolean) {
+    expect(getPayloadFromJWTSpy).toBeCalled();
+    expect(getPayloadFromJWTSpy).toReturn();
+
+    if (expectUndefined) {
+        expect(getPayloadFromJWTSpy).toReturnWith(undefined);
+    }
+    else {
+        expect(getPayloadFromJWTSpy).toReturnWith(testUserForJWT);
+    }
+}
+
+/**
+ * Verify that the getJWTFromPayload function was not called
+ */
+export function checkGetJWTFromPayloadWasNotCalled() {
+    expect(getPayloadFromJWTSpy).not.toBeCalled();
 }
 
 test("Forcing one test in file" , () => {});

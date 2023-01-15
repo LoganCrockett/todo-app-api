@@ -2,12 +2,15 @@ import express, { Express, Request, Response } from "express";
 import UserRouter from "./routers/user.router";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
+import TodoListRouter from "./routers/todoList.router";
 
 const server: Express = express();
 server.use(bodyParser.json());
 server.use(cookieParser(process.env.COOKIE_SECRET));
 
 server.use("/api/user", UserRouter);
+
+server.use("/api/list", TodoListRouter);
 
 server.all("*", (req: Request, res: Response) => {
     return res.status(404).send("Not found");

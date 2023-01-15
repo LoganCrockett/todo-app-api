@@ -2,6 +2,7 @@ import fs from "fs";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { Response, Request, NextFunction, CookieOptions } from "express";
 import ResponseBody from "../models/response/responseBody.model";
+import User from "../models/users/user.model";
 
 const privateKey = fs.readFileSync("private.pem");
 const publicKey = fs.readFileSync("public.pem");
@@ -11,7 +12,7 @@ const publicKey = fs.readFileSync("public.pem");
  * @param res response to add cookie to
  * @param payload payload to create token for
  */
-export function addCookieToResponse(res: Response, payload: {}): void {
+export function addCookieToResponse(res: Response, payload: User): void {
     const token = jwt.sign(payload, privateKey, {
             algorithm: "RS256",
             // 15 Minute Timeout
@@ -58,7 +59,7 @@ export function verifyAndRefreshJWTFromRequestCookie(req: Request, res: Response
         delete decoded.iat;
         delete decoded.exp;
 
-        addCookieToResponse(res, decoded);
+        addCookieToResponse(res, decoded as User);
 
         // If decoded has a value, then the JWT is valid
         // Pass to the next handler
@@ -113,12 +114,31 @@ export function verifyJWTTokenFromRequestCookie(req: Request, res: Response<Resp
     }
 };
 
+/**
+ * Retrieves tha Payload from a JWT token (in this case, should be current user object)
+ * @param req request we are retrieving token from
+ * @returns Token payload, or undefined if not present/an error occurs
+ */
+export function getPayloadFromJWT(req: Request): undefined | JwtPayload {
+    const token = req.signedCookies.userSession;
+
+    if (!token) {
+        return undefined;
+    }
+    try {
+        return jwt.verify(token, publicKey, {
+            maxAge: "15m"
+        }) as JwtPayload;
+    } catch (err) {
+        return undefined;
+    }
+}
+
 export const cookieOptions: CookieOptions = {
     // 15 Minute timeout
     maxAge: 15 * 60 * 1000,
     signed: true,
     sameSite: true,
     httpOnly: true,
-    // Comment out if testing locally
     secure: process.env.NODE_ENV === "production"
 };
