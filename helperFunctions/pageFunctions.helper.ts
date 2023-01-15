@@ -5,7 +5,7 @@
  * @returns how many pages of data total there are
  */
 export default function getTotalPages(totalCount: number, perPage: number): number {
-    if (Number.isNaN(totalCount) || Number.isNaN(perPage)) {
+    if (Number.isNaN(totalCount) || isNaN(totalCount) || Number.isNaN(perPage) || isNaN(perPage)) {
         throw new TypeError("Parameters must be a number");
     }
     
