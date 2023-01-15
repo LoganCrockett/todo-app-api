@@ -1,5 +1,7 @@
 import TodoList from "../models/todoList/TodoList.model";
 import sql from "../db";
+import Page from "../models/Page";
+import getTotalPages from "../helperFunctions/pageFunctions.helper";
 
 /**
  * Stores basic functions needed to perform CRUD operations on the DB for
@@ -28,15 +30,35 @@ export default class TodoListDAO {
     }
 
     /**
-     * Get's a list by id
-     * @param id list id
-     * @returns Promise containg the list object; oterwise, undefined
+     * Get's a page of lists created by the user (Ordered by lastUpdatedDate)
+     * @param userId user id AKA the creator
+     * @param page page we are fetching
+     * @param perPage number of elements to grab per page
+     * @returns Promise containg the page of lists; otherwise, undefined
      */
-    public static async getListById(id: number): Promise<TodoList> {
+    public static async getListByPage(userId: number, page: number, perPage: number): Promise<Page<Array<TodoList>>> {
         return await sql.begin(async () => {
-            const [list] = await sql<TodoList[]>`select * from todo.list l where l.id = ${id}`;
+            // Note: Subtract one from the page in order to crrectly grab all data
+            const list = await sql<TodoList[]>`
+            select * from todo.list l
+            where l."createdBy" = ${userId}
+            order by "lastUpdatedDate" desc
+            limit ${perPage} offset ${(page - 1) * perPage}
+            `;
 
-            return list;
+            const [count] = await sql<any>`
+            select count(*) from todo.list l
+            where l."createdBy" = ${userId}
+            `;
+
+            const pagedData: Page<Array<TodoList>> = {
+                page,
+                perPage,
+                totalPages: getTotalPages(count.count, perPage),
+                data: list
+            };
+
+            return pagedData;
         });
     }
 

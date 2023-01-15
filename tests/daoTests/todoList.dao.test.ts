@@ -1,5 +1,6 @@
 import { PostgresError } from "postgres";
 import TodoListDAO from "../../dao/todoList.dao";
+import getTotalPages from "../../helperFunctions/pageFunctions.helper";
 import { todoLists } from "../../mockData/todoList.data";
 import { users } from "../../mockData/users.data";
 import TodoList from "../../models/todoList/TodoList.model";
@@ -37,21 +38,23 @@ describe("Todo List DAO Tests (Valid)", () => {
         });
     });
 
-    test.each(todoLists)("Getting List by Id (Valid)", async (list) => {
-        await TodoListDAO.getListById(list.id)
-        .then((res: TodoList) => {
-            expect(res).toBeDefined();
+    test.each(users)("Getting Page of lists (User has lists)", async (user) => {
+        const listCount = todoLists.filter((list) => {
+            return list.createdBy === user.id
+        }).length;
 
-            expect(res.id).toEqual(list.id);
-            expect(res.createdBy).toEqual(list.createdBy);
-            expect(res.name).toEqual(list.name);
-            expect(res.createdOnDate).toBeDefined();
-            expect(res.lastUpdatedDate).toBeDefined();
+        await TodoListDAO.getListByPage(user.id, 1, 10)
+        .then((res) => {
+            expect(res).toBeDefined();
+            expect(res.page).toEqual(1);
+            expect(res.perPage).toEqual(10);
+            expect(res.totalPages).toEqual(getTotalPages(listCount, 10));
+            expect(res.data.length).toEqual(listCount);
         })
-        .catch((err: PostgresError) => {
+        .catch((err) => {
             console.log(err.message);
             expect(err.message).toBe("Received an error. Forcing this test to fail.");
-        })
+        });
     });
 
     test.each(todoLists)("Updating List by Id (Valid)", async (list) => {
@@ -84,15 +87,24 @@ describe("Todo List DAO Tests (Valid)", () => {
 });
 
 describe("Todo List DAO Tests (Invalid)", () => {
-    test("Getting List by Id (Not Found)", async () => {
-        await TodoListDAO.getListById(-1)
-        .then((res: TodoList) => {
-            expect(res).toBeUndefined();
+    test("Getting Page of lists (User has no lists)", async () => {
+        const userId = -1;
+        const page = 1;
+        const perPage = 10;
+
+        await TodoListDAO.getListByPage(userId, page, perPage)
+        .then((res) => {
+            expect(res).toBeDefined();
+
+            expect(res.page).toEqual(page);
+            expect(res.perPage).toEqual(perPage);
+            expect(res.totalPages).toEqual(0);
+            expect(res.data.length).toEqual(0);
         })
-        .catch((err: PostgresError) => {
+        .catch((err) => {
             console.log(err.message);
             expect(err.message).toBe("Received an error. Forcing this test to fail.");
-        })
+        });
     });
 
     test("Updating List by Id (Not Found)", async () => {
