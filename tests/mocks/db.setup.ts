@@ -4,6 +4,7 @@ import argon2Options from "../../helperFunctions/argon2Options.helper";
 import { userPasswordData, users } from "../../mockData/users.data";
 import { UserCredentials } from "../../models/users/user.model";
 import { todoLists } from "../../mockData/todoList.data";
+import { listItems } from "../../mockData/listItems.data";
 
 /**
  * Inserts user's data & their credentials into the DB for testing;
@@ -73,6 +74,29 @@ export async function removeTodoLists() {
     })
     .catch((err) => {
         console.log("An error occured while removing lists");
+        console.log(err.message);
+        sql.end();
+    });
+}
+
+/**
+ * Inserts todo list items into the DB for testing
+ */
+export async function insertTodoListItems() {
+    await sql.begin(async () => {
+        await sql`insert into todo."listItems" ${sql(listItems, "id", "listId", "description", "createdOnDate")}`;
+    });
+}
+
+/**
+ * Removes todo list items from the DB for testing
+ */
+export async function removeTodoListItems() {
+    await sql.begin(async () => {
+        await sql`delete from todo."listItems"`;
+    })
+    .catch((err) => {
+        console.log("An error occured while removing list items");
         console.log(err.message);
         sql.end();
     });
