@@ -239,6 +239,32 @@ const invalidPageParameters = [
 ];
 
 describe("Todo List Router Tests (Invalid)", () => {
+    test.each(invalidIds)("Invalid Id Format Tests (Catch All middleware)", async (id) => {
+        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
+            mockAddCookieToResponse(res, payload);
+        });
+
+        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
+            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
+        });
+
+        await tester.delete(`${todoListRouterLink}/${id}`)
+        .set("Content-Type", "application/json")
+        .send()
+        .expect("Content-Type", /json/)
+        .expect(400)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+            expect(typeof res.body.data).toMatch("string");
+
+            checkAddCookieToResponse();
+            checkIfUserSessionCookieIsPresent(res);
+            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
+
+            expect(TodoListDAO.deleteListById).not.toBeCalled();
+        });
+    });
+
     test.each(invalidNewListData)("Creating New List (Invalid Data)", async (data) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
             mockAddCookieToResponse(res, payload);
@@ -427,39 +453,13 @@ describe("Todo List Router Tests (Invalid)", () => {
         .then((res) => {
             expect(res.body.data).toBeDefined();
             expect (typeof res.body.data).toMatch("string");
-
+            
             checkIfUserSessionCookieIsPresent(res);
             checkAddCookieToResponse();
             checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
             checkGetJWTFromPayloadWasCalled(false);
 
             expect(TodoListDAO.getListByPage).toBeCalled();
-        });
-    });
-
-    test.each(invalidIds)("Updating a new list (Invalid Id)", async (id) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
-            mockAddCookieToResponse(res, payload);
-        });
-
-        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
-        });
-
-        await tester.put(`${todoListRouterLink}/${id}`)
-        .set("Content-Type", "application/json")
-        .send()
-        .expect("Content-Type", /json/)
-        .expect(400)
-        .then((res) => {
-            expect(res.body.data).toBeDefined();
-            expect(typeof res.body.data).toMatch("string");
-
-            checkAddCookieToResponse();
-            checkIfUserSessionCookieIsPresent(res);
-            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
-
-            expect(TodoListDAO.updateListById).not.toBeCalled();
         });
     });
 
@@ -553,32 +553,6 @@ describe("Todo List Router Tests (Invalid)", () => {
             checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
 
             expect(TodoListDAO.updateListById).toBeCalledWith(1, "Testing Name");
-        });
-    });
-
-    test.each(invalidIds)("Deleting a list (Invalid Id)", async (id) => {
-        addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
-            mockAddCookieToResponse(res, payload);
-        });
-
-        verifyAndRefreshJWTFromRequestCookieSpy.mockImplementation((req: Request, res: Response, next: NextFunction) => {
-            mockVerifyAndRefreshJWTFromRequestCookie(req, res, next, true);
-        });
-
-        await tester.delete(`${todoListRouterLink}/${id}`)
-        .set("Content-Type", "application/json")
-        .send()
-        .expect("Content-Type", /json/)
-        .expect(400)
-        .then((res) => {
-            expect(res.body.data).toBeDefined();
-            expect(typeof res.body.data).toMatch("string");
-
-            checkAddCookieToResponse();
-            checkIfUserSessionCookieIsPresent(res);
-            checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled();
-
-            expect(TodoListDAO.deleteListById).not.toBeCalled();
         });
     });
 

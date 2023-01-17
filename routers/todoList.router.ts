@@ -14,12 +14,26 @@ const TodoListRouter: Router = Router({
     caseSensitive: true
 });
 
+// Authentication Interceptor for this router
+TodoListRouter.use((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    verifyAndRefreshJWTFromRequestCookie(req, res, next);
+});
+
+// Verify the list id is valid
+TodoListRouter.use("/:id", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    if (Number.isNaN(Number.parseInt(req.params.id))) {
+        return res.status(400).json({
+            data: "Invalid list id format"
+        });
+    }
+
+    next();
+});
+
 /**
  * Creates a new TodoList
  */
-TodoListRouter.post("", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-    verifyAndRefreshJWTFromRequestCookie(req, res, next);
-}, async (req: Request, res: Response<ResponseBody<string | TodoList>>, next: NextFunction) => {
+TodoListRouter.post("", async (req: Request, res: Response<ResponseBody<string | TodoList>>, next: NextFunction) => {
     const { name }: NewTodoListData = req.body;
 
     if (!checkStringValidity(name)) {
@@ -52,9 +66,7 @@ TodoListRouter.post("", (req: Request, res: Response<ResponseBody<string>>, next
 /**
  * Get's a page of list based of the creator id (AKA User)
  */
-TodoListRouter.get("", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-    verifyAndRefreshJWTFromRequestCookie(req, res, next);
-}, async (req: Request, res: Response<ResponseBody<string | Page<TodoList>>>, next: NextFunction) => {
+TodoListRouter.get("", async (req: Request, res: Response<ResponseBody<string | Page<TodoList>>>, next: NextFunction) => {
     const currentLoggedInUser = getPayloadFromJWT(req) as User;
 
     if (currentLoggedInUser === undefined || currentLoggedInUser.id === undefined || currentLoggedInUser.id === null) {
@@ -108,16 +120,8 @@ TodoListRouter.get("", (req: Request, res: Response<ResponseBody<string>>, next:
 /**
  * Updates an existing TodoList by id
  */
-TodoListRouter.put("/:id", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-    verifyAndRefreshJWTFromRequestCookie(req, res, next);
-}, async (req: Request, res: Response<ResponseBody<string | TodoList>>, next: NextFunction) => {
+TodoListRouter.put("/:id", async (req: Request, res: Response<ResponseBody<string | TodoList>>, next: NextFunction) => {
     const listId: number = Number.parseInt(req.params.id);
-
-    if (Number.isNaN(listId)) {
-        return res.status(400).json({
-            data: "Invalid Id format detected"
-        });
-    }
 
     const { name }: NewTodoListData = req.body;
 
@@ -149,16 +153,8 @@ TodoListRouter.put("/:id", (req: Request, res: Response<ResponseBody<string>>, n
 /**
  * Deletes an existing TodoList by id
  */
-TodoListRouter.delete("/:id", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-    verifyAndRefreshJWTFromRequestCookie(req, res, next);
-}, async (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+TodoListRouter.delete("/:id", async (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
     const listId: number = Number.parseInt(req.params.id);
-
-    if (Number.isNaN(listId)) {
-        return res.status(400).json({
-            data: "Invalid Id format detected"
-        });
-    }
 
     await TodoListDAO.deleteListById(listId)
     .then((wasSuccessful) => {
