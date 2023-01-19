@@ -8,6 +8,7 @@ import NewTodoListData from "../models/request/todoList/NewTodoListData.model";
 import ResponseBody from "../models/response/responseBody.model";
 import TodoList from "../models/todoList/TodoList.model";
 import User from "../models/users/user.model";
+import ListItemRouter from "./listItem.router";
 
 // Should match to /list
 const TodoListRouter: Router = Router({
@@ -20,8 +21,8 @@ TodoListRouter.use((req: Request, res: Response<ResponseBody<string>>, next: Nex
 });
 
 // Verify the list id is valid
-TodoListRouter.use("/:id", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-    if (Number.isNaN(Number.parseInt(req.params.id))) {
+TodoListRouter.use("/:listId", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    if (Number.isNaN(Number.parseInt(req.params.listId))) {
         return res.status(400).json({
             data: "Invalid list id format"
         });
@@ -120,8 +121,8 @@ TodoListRouter.get("", async (req: Request, res: Response<ResponseBody<string | 
 /**
  * Updates an existing TodoList by id
  */
-TodoListRouter.put("/:id", async (req: Request, res: Response<ResponseBody<string | TodoList>>, next: NextFunction) => {
-    const listId: number = Number.parseInt(req.params.id);
+TodoListRouter.put("/:listId", async (req: Request, res: Response<ResponseBody<string | TodoList>>, next: NextFunction) => {
+    const listId: number = Number.parseInt(req.params.listId);
 
     const { name }: NewTodoListData = req.body;
 
@@ -153,8 +154,8 @@ TodoListRouter.put("/:id", async (req: Request, res: Response<ResponseBody<strin
 /**
  * Deletes an existing TodoList by id
  */
-TodoListRouter.delete("/:id", async (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
-    const listId: number = Number.parseInt(req.params.id);
+TodoListRouter.delete("/:listId", async (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    const listId: number = Number.parseInt(req.params.listId);
 
     await TodoListDAO.deleteListById(listId)
     .then((wasSuccessful) => {
@@ -174,5 +175,7 @@ TodoListRouter.delete("/:id", async (req: Request, res: Response<ResponseBody<st
         });
     })
 });
+
+TodoListRouter.use("/:listId/item", ListItemRouter);
 
 export default TodoListRouter;

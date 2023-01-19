@@ -12,6 +12,7 @@ import UpdateUserData from "../../models/request/user/UpdateUserData.model";
 import { addCookieToResponseSpy, mockAddCookieToResponse, mockVerifyAndRefreshJWTFromRequestCookie, mockVerifyJWTTokenFromRequestCookie, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
 import { checkAddCookieToResponse, checkAddCookieToResponseWasNotCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled, checkVerifyJWTTokenFromRequestCookieSpyWasCalled, checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled } from "../reusableTests/cookies.test";
 import User from "../../models/users/user.model";
+import invalidIds from "../../mockData/invalidIds.data";
 
 const tester = supertest(server);
 const userRouterLink: string = "/api/user";
@@ -295,12 +296,6 @@ const invalidLoginCredentials: Array<UserLoginTestCredentials | undefined> = [
     }
 ];
 
-const invalidUserIds = [
-    undefined,
-    null,
-    "testing"
-];
-
 const invalidUpdateUserData = [
     {
         id: 1,
@@ -510,7 +505,7 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.each(invalidUserIds)("Getting User by Id (Invalid)", async (id) => {
+    test.each(invalidIds)("Getting User by Id (Invalid)", async (id) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
             mockAddCookieToResponse(res, payload);
         });
@@ -569,7 +564,7 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.each(invalidUserIds)("Updating user by Id (Invalid Id's)", async (id) => {
+    test.each(invalidIds)("Updating user by Id (Invalid Id's)", async (id) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
             mockAddCookieToResponse(res, payload);
         });
@@ -668,7 +663,7 @@ describe("User Router (Invalid Data)", () => {
         });
     });
 
-    test.each(invalidUserIds)("Reseting User Password (Invalid User Id)", async (id) => {
+    test.each(invalidIds)("Reseting User Password (Invalid User Id)", async (id) => {
         addCookieToResponseSpy.mockImplementation((res: Response, payload: User) => {
             mockAddCookieToResponse(res, payload);
         });

@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import supertest from "supertest";
 import TodoListDAO from "../../dao/todoList.dao";
+import invalidIds from "../../mockData/invalidIds.data";
 import { todoLists } from "../../mockData/todoList.data";
-import { users } from "../../mockData/users.data";
 import Page from "../../models/Page";
 import TodoList from "../../models/todoList/TodoList.model";
 import User from "../../models/users/user.model";
@@ -195,12 +195,6 @@ const invalidNewListData = [
     {
         name: "",
     }
-];
-
-const invalidIds = [
-    undefined,
-    null,
-    "name"
 ];
 
 const invalidPageParameters = [
