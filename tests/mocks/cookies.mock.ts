@@ -8,6 +8,7 @@ export const addCookieToResponseSpy: jest.SpyInstance = jest.spyOn(userAuthFunct
 export const verifyAndRefreshJWTFromRequestCookieSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "verifyAndRefreshJWTFromRequestCookie");
 export const verifyJWTTokenFromRequestCookieSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "verifyJWTTokenFromRequestCookie");
 export const getPayloadFromJWTSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "getPayloadFromJWT");
+export const verifyJWTTokenFromRequestCookieForLogoutSpy: jest.SpyInstance = jest.spyOn(userAuthFunctions, "verifyJWTTokenFromRequestCookieForLogout");
 
 export const testUserForJWT: User = {
     id: 1,
@@ -60,8 +61,28 @@ export function mockVerifyJWTTokenFromRequestCookie(req: Request, res: Response<
         return;
     }
 
-    res.status(400).json({
+    res.status(401).json({
         data: "user already logged in"
+    });
+    return;
+};
+
+/**
+ * Mocks the return value for the verifyJWTTokenFromRequestCookieForLogout function
+ * @param req request
+ * @param res response
+ * @param next next handler function
+ * @param shouldBeSuccessful if we should return a successful value, or not
+ * @returns 
+ */
+export function mockVerifyJWTTokenFromRequestCookieForLogout(req: Request, res: Response<ResponseBody<string>>, next: NextFunction, shouldBeSuccessful: boolean): void {
+    if (shouldBeSuccessful) {
+        next();
+        return;
+    }
+
+    res.status(401).json({
+        data: "user not logged in"
     });
     return;
 };

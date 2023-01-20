@@ -3,7 +3,7 @@ import NewUserData from "../models/request/user/NewUserData.model";
 import ResponseBody from "../models/response/responseBody.model";
 import UserDAO from "../dao/user.dao";
 import UserLoginCredentials from "../models/request/user/UserLoginCredentials.model";
-import { addCookieToResponse, verifyAndRefreshJWTFromRequestCookie, verifyJWTTokenFromRequestCookie } from "../helperFunctions/cookies.helper";
+import { addCookieToResponse, cookieOptions, verifyAndRefreshJWTFromRequestCookie, verifyJWTTokenFromRequestCookie, verifyJWTTokenFromRequestCookieForLogout } from "../helperFunctions/cookies.helper";
 import User from "../models/users/user.model";
 import UpdateUserData from "../models/request/user/UpdateUserData.model";
 import ResetUserPasswordData from "../models/request/user/ResetUserPasswordData.model";
@@ -253,7 +253,23 @@ UserRouter.put("/:id/resetUserPassword", (req: Request, res: Response<ResponseBo
             data: "An unexpected error occured. Please try again."
         });
     })
-})
+});
+
+/**
+ * Logs a user out
+ */
+UserRouter.post("/logout", (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    verifyJWTTokenFromRequestCookieForLogout(req, res, next);
+}, (req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+    res.cookie("userSession", "", {
+        ...cookieOptions,
+        maxAge: 0
+    });
+
+    return res.status(200).json({
+        data: "Successfully logged out user"
+    });
+});
 
 /**
  * Checks if a given email is the valid format

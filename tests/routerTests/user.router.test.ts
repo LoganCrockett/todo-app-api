@@ -9,7 +9,7 @@ import ResponseBody from "../../models/response/responseBody.model";
 import { checkIfUserSessionCookieIsPresent, checkIfUserSessionCookieIsNotPresent } from "../reusableTests/userSessionCookie.test";
 import { mockCheckUserCredentialsForLogin, mockCreateUser, mockGetUserById, mockResetUserPassword, mockUpdateUserById } from "../mocks/dao/user.dao.mock";
 import UpdateUserData from "../../models/request/user/UpdateUserData.model";
-import { addCookieToResponseSpy, mockAddCookieToResponse, mockVerifyAndRefreshJWTFromRequestCookie, mockVerifyJWTTokenFromRequestCookie, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
+import { addCookieToResponseSpy, mockAddCookieToResponse, mockVerifyAndRefreshJWTFromRequestCookie, mockVerifyJWTTokenFromRequestCookie, mockVerifyJWTTokenFromRequestCookieForLogout, verifyAndRefreshJWTFromRequestCookieSpy, verifyJWTTokenFromRequestCookieForLogoutSpy, verifyJWTTokenFromRequestCookieSpy } from "../mocks/cookies.mock";
 import { checkAddCookieToResponse, checkAddCookieToResponseWasNotCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasCalled, checkVerifyAndRefreshJWTTokenFromRequestCookieSpyWasNotCalled, checkVerifyJWTTokenFromRequestCookieSpyWasCalled, checkVerifyJWTTokenFromRequestCookieSpyWasNotCalled } from "../reusableTests/cookies.test";
 import User from "../../models/users/user.model";
 import invalidIds from "../../mockData/invalidIds.data";
@@ -217,7 +217,31 @@ describe("User Router (Valid Data)", () => {
             expect(UserDao.resetUserPassword).toBeCalledWith(updateUserPasswordData.id, updateUserPasswordData.oldPassword, updateUserPasswordData.newPassword);
         });
     });
-    
+
+    test("User Logout (User is Logged In)", async () => {
+        verifyJWTTokenFromRequestCookieForLogoutSpy.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+            mockVerifyJWTTokenFromRequestCookieForLogout(req, res, next, true);
+        });
+
+        await tester.post(`${userRouterLink}/logout`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .expect(200)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+
+            expect(verifyJWTTokenFromRequestCookieForLogoutSpy).toBeCalledTimes(1);
+            
+            expect(res.headers["set-cookie"]).toBeDefined();
+
+            const authCookieIndex = res.headers["set-cookie"].findIndex((header: string) => {
+                return header.includes("userSession");
+            });
+
+            expect(authCookieIndex).toBeGreaterThan(-1);
+            expect(res.headers["set-cookie"][authCookieIndex]).toContain("Max-Age=0");
+        });
+    });
 });
 
 const invalidNewUserData: Array<NewUserTestData | undefined> = [
@@ -490,7 +514,7 @@ describe("User Router (Invalid Data)", () => {
         .set("Content-Type", "application/json")
         .send(userCredentialsData)
         .expect("Content-Type", /json/)
-        .expect(400)
+        .expect(401)
         .then((res) => {
             expect(res.body.data).toBeDefined();
             expect(typeof res.body.data).toMatch("string");
@@ -717,6 +741,24 @@ describe("User Router (Invalid Data)", () => {
             expect(typeof res.body.data).toEqual("string");
 
             expect(UserDao.resetUserPassword).not.toBeCalled();
+        });
+    });
+
+    test("User Logout (User Not Logged In)", async () => {
+        verifyJWTTokenFromRequestCookieForLogoutSpy.mockImplementation((req: Request, res: Response<ResponseBody<string>>, next: NextFunction) => {
+            mockVerifyJWTTokenFromRequestCookieForLogout(req, res, next, false);
+        });
+
+        await tester.post(`${userRouterLink}/logout`)
+        .set("Content-Type", "application/json")
+        .expect("Content-Type", /json/)
+        .expect(401)
+        .then((res) => {
+            expect(res.body.data).toBeDefined();
+
+            expect(verifyJWTTokenFromRequestCookieForLogoutSpy).toBeCalledTimes(1);
+
+            checkIfUserSessionCookieIsNotPresent(res);
         });
     });
 });

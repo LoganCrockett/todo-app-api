@@ -75,7 +75,7 @@ export function verifyAndRefreshJWTFromRequestCookie(req: Request, res: Response
 /**
  * Verifies that a JWT cookie from a request is valid (Used only for the inital login route)
  * 
- * If there is a valid token present, then returns a status code of 400
+ * If there is a valid token present, then returns a status code of 401
  * 
  * @param req  request we are checking
  * @param res response object
@@ -102,8 +102,8 @@ export function verifyJWTTokenFromRequestCookie(req: Request, res: Response<Resp
         }
 
         // If it is a valid token, the user has already logged in.
-        // Return a bad request (400)
-        res.status(400).json({
+        // Return an Unauthorized (401)
+        res.status(401).json({
             data: "user already logged in"
         });
         return;
@@ -111,6 +111,48 @@ export function verifyJWTTokenFromRequestCookie(req: Request, res: Response<Resp
         // No valid token means we need to login
         next();
         return;
+    }
+};
+
+/**
+ * Verifies that a JWT token is not present for the logout route
+ * 
+ * If there is not a token, then returns a status code of 401
+ * @param req request
+ * @param res response
+ * @param next next function
+ */
+export function verifyJWTTokenFromRequestCookieForLogout(req: Request, res: Response<ResponseBody<string>>, next: NextFunction) {
+    const token = req.signedCookies.userSession;
+
+    // No token present means user is not logged in
+    if (!token) {
+        return res.status(401).json({
+            data: "user not logged in"
+        });
+    }
+
+    try {
+        const decoded: JwtPayload = jwt.verify(token, publicKey, {
+            maxAge: "15m"
+        }) as JwtPayload;
+
+        // If not defined, return 401
+        if (!decoded) {
+            return res.status(401).json({
+                data: "user not logged in"
+            });
+        }
+
+        // If it is a valid token, the user needs to logout
+        // Call next function
+        next();
+        return;
+    } catch (err) {
+        // No valid token means we need to retunr 401
+        return res.status(401).json({
+            data: "user not logged in"
+        });
     }
 };
 
