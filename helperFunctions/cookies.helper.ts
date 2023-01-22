@@ -4,8 +4,8 @@ import { Response, Request, NextFunction, CookieOptions } from "express";
 import ResponseBody from "../models/response/responseBody.model";
 import User from "../models/users/user.model";
 
-const privateKey = fs.readFileSync("private.pem");
-const publicKey = fs.readFileSync("public.pem");
+const privateKey = fs.readFileSync("./envFiles/private.pem");
+const publicKey = fs.readFileSync("./envFiles/public.pem");
 
 /**
  * Creates a JWT token, and adds it to the cookies in the Response object
@@ -182,5 +182,5 @@ export const cookieOptions: CookieOptions = {
     signed: true,
     sameSite: true,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production"
+    secure: process.env.NODE_ENV === "production" && process.env.SERVER_ENV === "production"
 };

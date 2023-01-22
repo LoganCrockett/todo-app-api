@@ -4,9 +4,11 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development nodemon index.ts",
-    "test": "cross-env NODE_ENV=test jest --runInBand --watch",
-    "test:coverage": "cross-env NODE_ENV=test jest --runInBand --coverage"
+    "dev": "cross-env NODE_ENV=development SERVER_ENV=local nodemon index.ts",
+    "test": "cross-env NODE_ENV=test SERVER_ENV=local jest --runInBand --watch",
+    "test:coverage": "cross-env NODE_ENV=test SERVER_ENV=local jest --runInBand --coverage",
+    "compile": "tsc --build",
+    "prod:local": "cross-env NODE_ENV=production SERVER_ENV=local node ./index.js"
   },
   "repository": {
     "type": "git",

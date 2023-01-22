@@ -105,3 +105,6 @@ dist
 
 # Encryption Key Files
 *.pem
+
+# Build output
+build/
