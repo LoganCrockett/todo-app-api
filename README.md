@@ -71,7 +71,7 @@ Add the public & private files to the **envFiles** folder.
 docker build -t todo-app-api:latest --no-cache -f Dockerfile.local.prod .
 </pre>
 
-3. Create a copy of the **.env.example** file (prefrrably called **.env.local.prod**, but feel free to call it what you want). Fill in all of the values present in that file.
+3. Create a copy of the **.env.example** file (preferably called **.env.local.prod**, but feel free to call it what you want). Fill in all of the values present in that file.
 
 4. In order to use the encryption key files inside the container, we are going to use a bind mount. Make a note of the full file path to where the **envFiles** folder is located on your machine (Ex: C:\Documents\todo-app-api\envFiles)
 
