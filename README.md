@@ -2,6 +2,17 @@
 
 REST API for my Todo Application
 
+# Setting Up the Database (Docker)
+In order to simplify development, I am using docker to run postgres DB locally. Please follow the steps for setting up a local copy.
+
+**Note:** These steps assume you are in the root directory of the project. If not, you may have to tweak the commands a bit to match the file path you are currently at.
+
+1. Open the **SCEHAM.sql** file in the **database** folder. On the first line, fill in a value for the *todoappadmin* user password, and save.
+2. Run <pre>docker build -t todo-app-db:latest ./database</pre> to build a copy of the DB image locally.
+3. Run <pre>docker run -e POSTGRES_PASSWORD="fill in value here" -e POSTGRES_DB="todoapp" --name db-test -p 5432:5432 -d todo-app-db:latest</pre>
+
+This will initialize the DB when the container is first created with the todo schema. If there are any sub-sequent changes to the schema, you'll either have to manually apply the changes, or delete the container, and rebuild the image.
+
 # Getting Started (Local Development)
 **Note:** These steps assume you have already configured the database using the SCHEMA.sql file. If not, then please follow the steps listed in section **Setting Up the Database (Docker)**.
 
@@ -20,17 +31,6 @@ npm install
 npm run dev
 </pre>
 4. The API server should now be running locally on the port specified.
-
-# Setting Up the Database (Docker)
-In order to simply development, I am using docker to run postgres DB locally. Please follow the steps for setting up a local copy
-
-**Note:** Please fill in a password value for postgres
-
-1. <pre>docker pull postgres:15</pre>
-2. <pre>docker run --name todo-app-db -e POSTGRES_PASSWORD=*fill in value here* -d postgres:15</pre>
-3. Open up a connection to the database with your favorite DB tool (I use PgAdmin), and copy the SCHEMA.sql file into the query editor.
-4. Fill in a value for the password for user **todoappadmin**, then run the SQL.
-5. Congrats!! You have successfully set up an instance of the database locally.
 
 # Testing
 I am using the Jest & Supertest library in order to test the API routes and other business logic (DAO's, etc).

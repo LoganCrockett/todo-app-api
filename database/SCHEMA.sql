@@ -1,6 +1,6 @@
 create user todoappadmin with password '';
 
-create database todoapp owner todoappadmin;
+alter database todoapp owner to todoappadmin;
 
 create schema if not exists todo authorization todoappadmin;
 
