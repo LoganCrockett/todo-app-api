@@ -1,5 +1,6 @@
 FROM node:18 as compilestage
 COPY . .
+RUN npm install
 RUN npm run compile
 WORKDIR /build
 RUN rm -r mockData

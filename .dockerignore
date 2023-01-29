@@ -7,10 +7,10 @@ coverage/
 # Environment files
 .env
 .env.*
+envFiles/
 
 # General Files & Folders
-./README.MD
+./README.md
 node_modules/
 database/
 .gitignore
-envFiles/
