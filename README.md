@@ -25,8 +25,6 @@ Add the public & private files to the **envFiles** folder.
 
 3. Run the following commands:
 <pre>
-git clone https://github.com/LoganCrockett/todo-app-api.git
-cd ./todo-app-api
 npm install
 npm run dev
 </pre>
@@ -48,7 +46,6 @@ Add the public & private files to the **envFiles** folder.
 
 3. 
 <pre>
-cd ./todo-app-api
 npm install
 npm run test
 </pre>
@@ -58,8 +55,10 @@ npm run test
 
 Due to this, if you just created the database, you may run into primary_key_constraint errors on some of the tables. This is completely normal. You may need to run the test command multiple times in order for this error to disappear. Alternatively, you could modify the sequence in the DB to have its current value be equal to the highest ID value in the fake data.
 
-# Production (Local)
+# Runnig in Production Mode (Local: Docker)
 For running a copy of the API locally in production mode, we will use a docker container.
+
+**Note:** These steps assume you have already configured the database using the SCHEMA.sql file. If not, then please follow the steps listed in section **Setting Up the Database (Docker)**.
 
 1. If you have not done so, then using a website like [this](https://cryptotools.net/rsagen) (or any tool you prefer), generate an asymetric encryption key pair.
     - Name the files **public.pem** and **private.pem**
@@ -68,7 +67,7 @@ Add the public & private files to the **envFiles** folder.
 
 2. Run the following command to build the image locally:
 <pre>
-docker build -t todo-app-api:latest --no-cache -f Dockerfile.local.prod .
+docker build -t todo-app-api:latest .
 </pre>
 
 3. Create a copy of the **.env.example** file (preferably called **.env.local.prod**, but feel free to call it what you want). Fill in all of the values present in that file.
@@ -79,3 +78,28 @@ docker build -t todo-app-api:latest --no-cache -f Dockerfile.local.prod .
 <pre>
 docker run --name todo-app-api --mount type=bind,source="fill in value here",target=/todo-app-api/envFiles -d --env-file=./.env.local.prod -p 4000:4000 todo-app-api:latest
 </pre>
+
+# Running with Docker Compose
+If you are just wanting to quickly pull and run the API with minimal effort, I recommend using Docker Compose to stand up both the DB & API:
+
+1. If you have not done so, then using a website like [this](https://cryptotools.net/rsagen) (or any tool you prefer), generate an asymetric encryption key pair.
+    - Name the files **public.pem** and **private.pem**
+
+Add the public & private files to the **envFiles** folder.
+
+2. Open the **docker-compose.yml** file, and fill in the following values:
+    - *POSTGRES_PASSWORD* under the todo-app-db service
+    - *source* under volumes for the todo-app-api service
+
+Save the file once you have made the above changes.
+
+3. Open the **SCHEMA.sql** file in the database folder, and fill in a value for the password of the todoappadmin user on line 1. Save the file.
+
+4. Create a copy of the **.env.example** file (preferrably called .env.prod, but feel free to call it what you want). Fill in all of the values present in that file
+    - For **DB_HOST**, you can set the value to your machine's local IP address, or use **todo-app-db**
+
+5. Run the following command to start an instance of both the API & DB:
+<pre>
+docker compose --env-file ./.env.prod up
+</pre>
+Once they both have started, you should be able to access the API on the port you specified.

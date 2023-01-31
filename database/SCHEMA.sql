@@ -41,3 +41,6 @@ create table if not exists todo."listItems" (
 	references todo.list (id)
 	on update cascade on delete cascade
 );
+
+grant all privileges on all tables in schema todo to todoappadmin;
+grant all privileges on all sequences in schema todo to todoappadmin;

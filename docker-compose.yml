@@ -1,0 +1,39 @@
+version: "3.9"
+services:
+ todo-app-db:
+  image: todo-app-db:latest
+  build: ./database
+  networks:
+   - todoapp-network
+  container_name: todo-app-db
+  ports:
+   - "5432:5432"
+  environment:
+   POSTGRES_DB: "todoapp"
+   POSTGRES_PASSWORD: "fill in value here"
+ todo-app-api:
+  image: todo-app-api:latest
+  build: .
+  networks:
+   - todoapp-network
+  container_name: todo-app-api
+  depends_on:
+   - todo-app-db
+  ports:
+   - "4000:4000"
+  environment:
+   PORT:
+   DB_USER:
+   DB_PASSWORD:
+   DB_HOST:
+   DB_PORT:
+   DB_DATABASE:
+   COOKIE_SECRET:
+  volumes:
+   - type: bind
+     source: "fill in absolute path here"
+     target: /todo-app-api/envFiles
+networks:
+ todoapp-network:
+  name: todoapp-network
+  driver: bridge
