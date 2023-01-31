@@ -157,7 +157,7 @@ describe("Todo List Router Tests (Valid)", () => {
 
         await tester.get(`${todoListRouterLink}`)
         .set("Content-Type", "application/json")
-        .send({
+        .query({
             page: 1,
             perPage: 20
         })
@@ -401,7 +401,7 @@ describe("Todo List Router Tests (Invalid)", () => {
 
         await tester.get(`${todoListRouterLink}`)
         .set("Content-Type", "application/json")
-        .send({
+        .query({
             parameters
         })
         .expect("Content-Type", /json/)
@@ -438,7 +438,7 @@ describe("Todo List Router Tests (Invalid)", () => {
 
         await tester.get(`${todoListRouterLink}`)
         .set("Content-Type", "application/json")
-        .send({
+        .query({
             page: 1,
             perPage: 20
         })

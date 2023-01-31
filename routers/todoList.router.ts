@@ -75,10 +75,10 @@ TodoListRouter.get("", async (req: Request, res: Response<ResponseBody<string | 
             data: " An unexpected error occured. Please try again."
         });
     }
-
+    
     const parameters: PageParameters = {
-        page: Number.parseInt(req.body.page),
-        perPage: Number.parseInt(req.body.perPage)
+        page: Number.parseInt(req.query.page as string),
+        perPage: Number.parseInt(req.query.perPage as string)
     };
 
     if (Number.isNaN(parameters.page)) {
