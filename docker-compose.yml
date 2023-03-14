@@ -29,6 +29,7 @@ services:
    DB_PORT:
    DB_DATABASE:
    COOKIE_SECRET:
+   ALLOWED_ORIGIN:
   volumes:
    - type: bind
      source: "fill in absolute path here"

@@ -2,11 +2,16 @@ import express, { Express, Request, Response } from "express";
 import UserRouter from "./routers/user.router";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import TodoListRouter from "./routers/todoList.router";
 
 const server: Express = express();
 server.use(bodyParser.json());
 server.use(cookieParser(process.env.COOKIE_SECRET));
+
+server.use(cors({
+    origin: process.env.ALLOWED_ORIGIN
+}));
 
 server.use("/api/user", UserRouter);
 
